@@ -1,0 +1,1 @@
+DATABASE_URL="postgresql://rentalManager:123456@localhost:5432/rentalManager"

@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model agendas {
+  id         Int       @id @default(autoincrement())
+  data       DateTime
+  itemId     Int
+  clienteId  Int
+  enderecoId Int
+  observacao String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime
+  clientes   clientes  @relation(fields: [clienteId], references: [id])
+  enderecos  enderecos @relation(fields: [enderecoId], references: [id])
+  estoques   estoques  @relation(fields: [itemId], references: [id])
+}
+
+model clientes {
+  id        Int         @id @default(autoincrement())
+  nome      String
+  cep       String
+  rua       String
+  numero    String
+  contato   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime
+  agendas   agendas[]
+  enderecos enderecos[]
+}
+
+model enderecos {
+  id          Int       @id @default(autoincrement())
+  clienteId   Int
+  cep         String
+  rua         String
+  numero      String
+  complemento String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  agendas     agendas[]
+  clientes    clientes  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+}
+
+model estoques {
+  id          Int       @id @default(autoincrement())
+  nome        String
+  peso        Float
+  largura     Float
+  altura      Float
+  valorDiaria Float
+  ativo       Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  quantidade  Int       @default(0)
+  agendas     agendas[]
+}
+
+model usuarios {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  loginName String   @unique
+  email     String   @unique
+  senha     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
