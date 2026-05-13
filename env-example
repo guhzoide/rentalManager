@@ -1,1 +1,1 @@
-DATABASE_URL="postgresql://rentalManager:123456@localhost:5432/rentalManager"
+DATABASE_URL="mongodb+srv://guh:U$@svrcrcZyzWRgftD1K@cluster0.exemplo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
