@@ -1,3 +1,7 @@
+import { clientesValidator } from './clientesValidator';
+import { estoquesValidator } from './estoquesValidator';
+import { agendasValidator } from './agendasValidator';
+
 export interface GenericValidator {
   validate?: (data: any, tx?: any, originalData?: any) => Promise<any>;
   beforeSave?: (data: any, tx?: any, tableName?: string) => Promise<void>;
@@ -7,7 +11,9 @@ export interface GenericValidator {
 }
 
 const validators: Record<string, GenericValidator> = {
-  // Adicione validadores aqui conforme necessário
+  clientes: clientesValidator,
+  estoques: estoquesValidator,
+  agendas: agendasValidator,
 };
 
 export function getValidator(tableName: string): GenericValidator | null {

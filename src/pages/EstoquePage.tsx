@@ -16,11 +16,12 @@ interface EstoqueItem {
     altura: number;
     valorDiaria: number;
     quantidade: number;
+    disponivel: number;
     ativo: boolean;
 }
 
 const EMPTY: Omit<EstoqueItem, 'id'> = {
-    nome: '', peso: 0, largura: 0, altura: 0, valorDiaria: 0, quantidade: 0, ativo: true,
+    nome: '', peso: 0, largura: 0, altura: 0, valorDiaria: 0, quantidade: 0, disponivel: 0, ativo: true,
 };
 
 const columns: Column<EstoqueItem>[] = [
@@ -34,6 +35,12 @@ const columns: Column<EstoqueItem>[] = [
     {
         key: 'quantidade',
         label: 'Qtd Estoque',
+        width: '100px',
+        render: (v) => <strong style={{ color: Number(v) > 0 ? 'var(--success)' : 'var(--danger)' }}>{v}</strong>,
+    },
+    {
+        key: 'disponivel',
+        label: 'Qtd Disponível',
         width: '100px',
         render: (v) => <strong style={{ color: Number(v) > 0 ? 'var(--success)' : 'var(--danger)' }}>{v}</strong>,
     },
@@ -53,7 +60,7 @@ const columns: Column<EstoqueItem>[] = [
                 {v ? 'Ativo' : 'Inativo'}
             </span>
         ),
-    },
+    }
 ];
 
 export function EstoquePage() {
@@ -211,6 +218,15 @@ export function EstoquePage() {
                     {numField('largura', 'Largura (m)', 'm')}
                     {numField('altura', 'Altura (m)', 'm')}
                     {numField('quantidade', 'Quantidade em estoque *', 'un', '1')}
+                    <div className="form-group">
+                        <TextField
+                            type="number"
+                            label="Quantidade disponível"
+                            fullWidth
+                            value={form.disponivel}
+                            onChange={(e) => setForm({ ...form, disponivel: parseInt(e.target.value) || 0 })}
+                        />
+                    </div>
                     <div className="form-group full">
                         <TextField
                             label="Valor da diária"

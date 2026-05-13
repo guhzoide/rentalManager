@@ -11,11 +11,21 @@ interface Cliente {
     cep: string;
     rua: string;
     numero: string;
+    bairro: string;
     contato: string;
 }
 
+interface Endereco {
+    id: number;
+    clienteId: number;
+    cep: string;
+    rua: string;
+    numero: string;
+    bairro: string;
+}
+
 const EMPTY: Omit<Cliente, 'id'> = {
-    nome: '', cep: '', rua: '', numero: '', contato: '',
+    nome: '', cep: '', rua: '', numero: '', bairro: '', contato: '',
 };
 
 const columns: Column<Cliente>[] = [
@@ -23,6 +33,7 @@ const columns: Column<Cliente>[] = [
     { key: 'contato', label: 'Contato', width: '160px' },
     { key: 'cep', label: 'CEP', width: '110px' },
     { key: 'rua', label: 'Rua' },
+    { key: 'bairro', label: 'Bairro' },
     { key: 'numero', label: 'Nº', width: '80px' },
 ];
 
@@ -34,6 +45,11 @@ export function ClientesPage() {
     const [cepLoading, setCepLoading] = useState(false);
     const [rows, setRows] = useState<Cliente[]>([]);
     const [total, setTotal] = useState(0);
+
+    const [enderecosRows, setEnderecosRows] = useState<Endereco[]>([]);
+    const [enderecoForm, setEnderecoForm] = useState<Omit<Endereco, 'id' | 'clienteId'>>({ cep: '', rua: '', numero: '', bairro: '' });
+    const [showEnderecoForm, setShowEnderecoForm] = useState(false);
+    const [cepEnderecoLoading, setCepEnderecoLoading] = useState(false);
 
     const readMutation = trpc.service.read.useMutation({
         onSuccess: (res: any) => { setRows(res.data); setTotal(res.total); },
@@ -52,6 +68,91 @@ export function ClientesPage() {
         onSuccess: () => fetchClientes(),
     });
 
+    const readEnderecosMutation = trpc.service.read.useMutation({
+        onSuccess: (res: any) => setEnderecosRows(res.data),
+    });
+
+    const saveEnderecoMutation = trpc.service.create.useMutation({
+        onSuccess: () => {
+            toast.success('Endereço salvo com sucesso!', { theme: 'colored' });
+            setEnderecoForm({ cep: '', rua: '', numero: '', bairro: '' });
+            setShowEnderecoForm(false);
+            if (editing?.id) {
+                readEnderecosMutation.mutate({ table: 'enderecos', filtros: { clienteId: editing.id }, limit: 100 });
+            }
+        },
+        onError: (err) => toast.error(err.message),
+    });
+
+    const deleteEnderecoMutation = trpc.service.delete.useMutation({
+        onSuccess: () => {
+            if (editing?.id) {
+                readEnderecosMutation.mutate({ table: 'enderecos', filtros: { clienteId: editing.id }, limit: 100 });
+            }
+        },
+    });
+
+    useEffect(() => {
+        if (editing?.id) {
+            readEnderecosMutation.mutate({ table: 'enderecos', filtros: { clienteId: editing.id }, limit: 100 });
+        } else {
+            setEnderecosRows([]);
+        }
+    }, [editing]);
+
+    const fetchCepEndereco = async (cep: string) => {
+        const clean = cep.replace(/\D/g, '');
+        if (clean.length !== 8) return;
+        setCepEnderecoLoading(true);
+        try {
+            const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+            const data = await res.json();
+            if (!data.erro) {
+                setEnderecoForm((f) => ({ ...f, rua: data.logradouro || f.rua, bairro: data.bairro || f.bairro }));
+            }
+        } catch { /* silencioso */ }
+        setCepEnderecoLoading(false);
+    };
+
+    const handleAddEndereco = () => {
+        if (!editing?.id) return;
+        saveEnderecoMutation.mutate({
+            table: 'enderecos',
+            Itens: {
+                clienteId: editing.id,
+                ...enderecoForm,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+        });
+    };
+
+    const enderecoColumns: Column<Endereco>[] = [
+        { key: 'cep', label: 'CEP', width: '100px' },
+        { key: 'rua', label: 'Rua' },
+        { key: 'bairro', label: 'Bairro' },
+        { key: 'numero', label: 'Nº', width: '80px' },
+        {
+            key: 'id',
+            label: '',
+            width: '40px',
+            render: (_, row) => (
+                <button
+                    className="btn btn-ghost btn-sm btn-icon"
+                    style={{ color: 'var(--danger)' }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Remover este endereço?')) {
+                            deleteEnderecoMutation.mutate({ table: 'enderecos', Filtros: { id: row.id } });
+                        }
+                    }}
+                >
+                    ✕
+                </button>
+            ),
+        },
+    ];
+
     const fetchClientes = (p = page) => {
         readMutation.mutate({ table: 'clientes', pagina: p, limit: 20 });
     };
@@ -66,7 +167,7 @@ export function ClientesPage() {
             const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
             const data = await res.json();
             if (!data.erro) {
-                setForm((f) => ({ ...f, rua: data.logradouro || f.rua }));
+                setForm((f) => ({ ...f, rua: data.logradouro || f.rua, bairro: data.bairro || f.bairro }));
             }
         } catch { /* silencioso */ }
         setCepLoading(false);
@@ -130,7 +231,7 @@ export function ClientesPage() {
                                 🗑 Remover
                             </button>
                         )}
-                        <button className="btn btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
+                        <button className="btn btn-danger" onClick={() => setModalOpen(false)}>Cancelar</button>
                         <button className="btn btn-primary" onClick={handleSave} disabled={saveMutation.isPending}>
                             {saveMutation.isPending ? 'Salvando...' : '💾 Salvar'}
                         </button>
@@ -190,6 +291,17 @@ export function ClientesPage() {
 
                     <div className="form-group full">
                         <TextField
+                            label="Bairro"
+                            variant="outlined"
+                            fullWidth
+                            value={form.bairro}
+                            onChange={(e) => setForm({ ...form, bairro: e.target.value })}
+                            placeholder="Nome do bairro"
+                        />
+                    </div>
+
+                    <div className="form-group full">
+                        <TextField
                             label="Contato"
                             variant="outlined"
                             fullWidth
@@ -199,6 +311,84 @@ export function ClientesPage() {
                         />
                     </div>
                 </div>
+
+                {editing && (
+                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--border-color)' }}>
+                        <h4 style={{ marginBottom: 16 }}>Endereços Adicionais</h4>
+                        {showEnderecoForm && (
+                            <div className="form-grid" style={{ alignItems: 'flex-start', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', background: 'var(--bg-subtle)', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+                                <div className="form-group">
+                                    <TextField
+                                        label="CEP"
+                                        variant="outlined"
+                                        size="small"
+                                        fullWidth
+                                        value={enderecoForm.cep}
+                                        onChange={(e) => {
+                                            setEnderecoForm({ ...enderecoForm, cep: e.target.value });
+                                            fetchCepEndereco(e.target.value);
+                                        }}
+                                        slotProps={{ htmlInput: { maxLength: 9 } }}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <TextField
+                                        label="Rua"
+                                        variant="outlined"
+                                        size="small"
+                                        fullWidth
+                                        value={enderecoForm.rua}
+                                        onChange={(e) => setEnderecoForm({ ...enderecoForm, rua: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <TextField
+                                        label="Nº"
+                                        variant="outlined"
+                                        size="small"
+                                        fullWidth
+                                        value={enderecoForm.numero}
+                                        onChange={(e) => setEnderecoForm({ ...enderecoForm, numero: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <TextField
+                                        label="Bairro"
+                                        variant="outlined"
+                                        size="small"
+                                        fullWidth
+                                        value={enderecoForm.bairro}
+                                        onChange={(e) => setEnderecoForm({ ...enderecoForm, bairro: e.target.value })}
+                                        helperText={cepEnderecoLoading ? "Buscando..." : ""}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', height: '100%', paddingTop: 4, gap: 8 }}>
+                                    <button className="btn btn-ghost" style={{ height: 40 }} onClick={() => setShowEnderecoForm(false)}>
+                                        Cancelar
+                                    </button>
+                                    <button className="btn btn-primary" style={{ height: 40, width: '100%' }} onClick={handleAddEndereco} disabled={saveEnderecoMutation.isPending || !enderecoForm.rua}>
+                                        Salvar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div>
+                            <DataGrid
+                                columns={enderecoColumns}
+                                data={enderecosRows}
+                                loading={readEnderecosMutation.isPending}
+                                emptyText="Nenhum endereço adicional cadastrado."
+                                onAdd={() => setShowEnderecoForm(true)}
+                            />
+                        </div>
+                    </div>
+                )}
+                {!editing && (
+                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: 14 }}>
+                        Salve este cliente para poder adicionar múltiplos endereços.
+                    </div>
+                )}
             </Modal>
         </div>
     );
