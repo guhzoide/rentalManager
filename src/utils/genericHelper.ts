@@ -24,7 +24,7 @@ export function getPrimaryKeyFields(modelName: string): string[] {
     if (!model) return ['id'];
     
     if (model.primaryKey) {
-        return model.primaryKey.fields;
+        return [...model.primaryKey.fields];
     }
     
     const idFields = model.fields.filter(f => f.isId).map(f => f.name);

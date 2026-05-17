@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
 model agendas {
@@ -23,10 +24,7 @@ model agendas {
 model clientes {
   id        String      @id @default(auto()) @map("_id") @db.ObjectId
   nome      String
-  cep       String
-  rua       String
-  numero    String
-  bairro    String      @default("")
+  cpf       String?
   contato   String
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
@@ -38,10 +36,11 @@ model enderecos {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   clienteId   String    @db.ObjectId
   cep         String
+  bairro      String?
   rua         String
   numero      String
-  bairro      String    @default("")
   complemento String?
+  principal   Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   agendas     agendas[]

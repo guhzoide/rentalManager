@@ -1,0 +1,176 @@
+import { z } from 'zod';
+import { publicProcedure, router } from '../trpc';
+import { prisma } from '../trpc';
+import { paginationSchema, getPaginatedResult } from '../utils/pagination';
+
+const clienteInputSchema = z.object({
+  nome: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  cpf: z.string().optional().nullable(),
+  cep: z.string().optional().nullable(),
+  bairro: z.string().optional().nullable(),
+  rua: z.string().optional().nullable(),
+  numero: z.string().optional().nullable(),
+  complemento: z.string().optional().nullable(),
+  principal: z.boolean().optional().default(true),
+  contato: z.string().min(1, "Contato é obrigatório"),
+});
+
+import { type clientes } from '@prisma/client';
+
+export const clienteRouter = router({
+  list: publicProcedure
+    .input(paginationSchema)
+    .query(async ({ input }) => {
+      // Fetch paginated clients including their enderecos relation
+      const result = await getPaginatedResult<clientes>(prisma.clientes, input, {
+        include: {
+          enderecos: true,
+        }
+      });
+
+      // Map each client to include primary address fields for grid compatibility
+      const mappedData = result.data.map((c: any) => {
+        const primary = c.enderecos?.find((e: any) => e.complemento === 'Principal');
+        return {
+          id: c.id,
+          nome: c.nome,
+          cpf: c.cpf,
+          contato: c.contato,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          cep: primary?.cep || '',
+          bairro: primary?.bairro || '',
+          rua: primary?.rua || '',
+          numero: primary?.numero || '',
+          complemento: primary?.complemento || '',
+          principal: primary?.principal || false,
+        };
+      });
+
+      return {
+        ...result,
+        data: mappedData,
+      };
+    }),
+
+  create: publicProcedure
+    .input(clienteInputSchema)
+    .mutation(async ({ input }) => {
+      const { cep, bairro, rua, numero, complemento, principal, ...clienteData } = input;
+
+      const client = await prisma.clientes.create({
+        data: {
+          ...clienteData,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Automatically save the primary address to enderecos table if provided
+      if (cep || bairro || rua || numero) {
+        try {
+          if (principal) {
+            await prisma.enderecos.updateMany({
+              where: { clienteId: client.id, principal: true },
+              data: { principal: false }
+            });
+          }
+
+          await prisma.enderecos.create({
+            data: {
+              clienteId: client.id,
+              cep: cep || '',
+              bairro: bairro || '',
+              rua: rua || '',
+              numero: numero || '',
+              complemento: complemento || '',
+              principal: principal,
+              updatedAt: new Date(),
+            }
+          });
+        } catch (err) {
+          console.error("Erro ao criar endereço principal:", err);
+        }
+      }
+
+      return client;
+    }),
+
+  update: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      data: clienteInputSchema.partial(),
+    }))
+    .mutation(async ({ input }) => {
+      const { cep, bairro, rua, numero, complemento, principal, ...clienteData } = input.data;
+
+      const client = await prisma.clientes.update({
+        where: { id: input.id },
+        data: {
+          ...clienteData,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Sync updated primary address to enderecos table
+      if (cep !== undefined || bairro !== undefined || rua !== undefined || numero !== undefined || complemento !== undefined || principal !== undefined) {
+        try {
+          const isSettingPrincipal = principal === true;
+
+          if (isSettingPrincipal) {
+            await prisma.enderecos.updateMany({
+              where: { clienteId: input.id, principal: true },
+              data: { principal: false }
+            });
+          }
+
+          const primaryAddr = await prisma.enderecos.findFirst({
+            where: {
+              clienteId: input.id,
+              complemento: 'Principal'
+            }
+          });
+
+          if (primaryAddr) {
+            await prisma.enderecos.update({
+              where: { id: primaryAddr.id },
+              data: {
+                cep: cep !== undefined ? (cep || '') : primaryAddr.cep,
+                bairro: bairro !== undefined ? (bairro || '') : primaryAddr.bairro,
+                rua: rua !== undefined ? (rua || '') : primaryAddr.rua,
+                numero: numero !== undefined ? (numero || '') : primaryAddr.numero,
+                complemento: complemento !== undefined ? (complemento || '') : primaryAddr.complemento,
+                principal: principal !== undefined ? principal : primaryAddr.principal,
+                updatedAt: new Date(),
+              }
+            });
+          } else if (cep || bairro || rua || numero) {
+            // Create if it didn't exist historically and some address field is filled
+            await prisma.enderecos.create({
+              data: {
+                clienteId: input.id,
+                cep: cep ?? '',
+                bairro: bairro ?? '',
+                rua: rua ?? '',
+                numero: numero ?? '',
+                complemento: complemento ?? '',
+                principal: principal ?? true,
+                updatedAt: new Date(),
+              }
+            });
+          }
+        } catch (err) {
+          console.error("Erro ao atualizar endereço principal:", err);
+        }
+      }
+
+      return client;
+    }),
+
+  delete: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      return prisma.clientes.delete({
+        where: { id: input.id },
+      });
+    }),
+});
