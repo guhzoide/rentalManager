@@ -13,19 +13,13 @@ interface EstoqueItem {
 }
 
 export function CatalogPage() {
-  const [items, setItems] = useState<EstoqueItem[]>([]);
-  const readMutation = trpc.service.read.useMutation({
-    onSuccess: (res: any) => setItems(res.data),
+  const { data: estoqueRes, isLoading } = trpc.estoque.list.useQuery({
+    filtros: { ativo: true },
+    limit: 100,
   });
 
-  useEffect(() => {
-    // Busca apenas itens ativos
-    readMutation.mutate({
-      table: 'estoques',
-      filtros: { ativo: true },
-      limit: 100,
-    });
-  }, []);
+  const items = estoqueRes?.data || [];
+
 
   return (
     <div className="catalog-container" style={{
@@ -52,7 +46,8 @@ export function CatalogPage() {
         </p>
       </header>
 
-      {readMutation.isPending ? (
+      {isLoading ? (
+
         <div className="loading-container">
           <div className="loading-spinner" />
           <span>Carregando catálogo...</span>

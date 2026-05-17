@@ -23,33 +23,41 @@ export function UsuariosPage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Partial<Usuario> | null>(null);
     const [form, setForm] = useState(EMPTY);
-    const [rows, setRows] = useState<Usuario[]>([]);
-    const [total, setTotal] = useState(0);
     const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
-    const readMutation = trpc.service.read.useMutation({
-        onSuccess: (res: any) => { setRows(res.data); setTotal(res.total); },
+    const utils = trpc.useUtils();
+
+    const { data: usuariosData, isLoading: isLoadingList } = trpc.usuarios.list.useQuery({
+        pagina: page,
+        limit: 20
     });
 
-    const saveMutation = trpc.service.create.useMutation({
+    const createMutation = trpc.usuarios.create.useMutation({
         onSuccess: () => {
-            setStatus({ type: 'success', msg: 'Usuário salvo com sucesso!' });
-            fetchUsers();
+            setStatus({ type: 'success', msg: 'Usuário cadastrado com sucesso!' });
+            utils.usuarios.list.invalidate();
             setTimeout(() => { setModalOpen(false); setStatus(null); }, 1200);
         },
         onError: (err) => setStatus({ type: 'error', msg: err.message }),
     });
 
-    const deleteMutation = trpc.service.delete.useMutation({
-        onSuccess: () => fetchUsers(),
+    const updateMutation = trpc.usuarios.update.useMutation({
+        onSuccess: () => {
+            setStatus({ type: 'success', msg: 'Usuário atualizado com sucesso!' });
+            utils.usuarios.list.invalidate();
+            setTimeout(() => { setModalOpen(false); setStatus(null); }, 1200);
+        },
+        onError: (err) => setStatus({ type: 'error', msg: err.message }),
     });
 
-    const fetchUsers = (p = page) => {
-        readMutation.mutate({ table: 'usuarios', pagina: p, limit: 20 });
-    };
+    const deleteMutation = trpc.usuarios.delete.useMutation({
+        onSuccess: () => {
+            utils.usuarios.list.invalidate();
+        },
+        onError: (err) => setStatus({ type: 'error', msg: err.message }),
+    });
 
-    useState(() => { fetchUsers(1); });
 
     const openAdd = () => {
         setEditing(null);
@@ -68,27 +76,34 @@ export function UsuariosPage() {
     };
 
     const handleSave = () => {
-        const payload: any = editing?.id
-            ? { id: editing.id, nome: form.nome, loginName: form.loginName, email: form.email }
-            : { ...form };
+        if (editing?.id) {
+            const updateData: any = {
+                nome: form.nome,
+                loginName: form.loginName,
+                email: form.email
+            };
+            if (form.senha) updateData.senha = form.senha;
 
-        // só inclui senha se foi preenchida (no edit)
-        if (form.senha) payload.senha = form.senha;
-
-        saveMutation.mutate({ table: 'usuarios', Itens: payload });
+            updateMutation.mutate({
+                id: editing.id,
+                data: updateData
+            });
+        } else {
+            createMutation.mutate(form);
+        }
     };
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <DataGrid
                 columns={columns}
-                data={rows}
-                loading={readMutation.isPending}
+                data={usuariosData?.data || []}
+                loading={isLoadingList}
                 onRowClick={openEdit}
                 onAdd={openAdd}
-                total={total}
+                total={usuariosData?.total || 0}
                 page={page}
-                onPageChange={(p) => { setPage(p); fetchUsers(p); }}
+                onPageChange={(p) => setPage(p)}
                 pageSize={20}
                 emptyText="Nenhum usuário cadastrado."
             />
@@ -99,12 +114,12 @@ export function UsuariosPage() {
                 onClose={() => setModalOpen(false)}
                 footer={
                     <>
-                        {editing && (
+                        {editing?.id && (
                             <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => {
                                     if (confirm('Remover este usuário?')) {
-                                        deleteMutation.mutate({ table: 'usuarios', Filtros: { id: editing.id } });
+                                        deleteMutation.mutate({ id: editing.id as number });
                                         setModalOpen(false);
                                     }
                                 }}
@@ -112,10 +127,12 @@ export function UsuariosPage() {
                                 🗑 Remover
                             </button>
                         )}
+
                         <button className="btn btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-                        <button className="btn btn-primary" onClick={handleSave} disabled={saveMutation.isPending}>
-                            {saveMutation.isPending ? 'Salvando...' : '💾 Salvar'}
+                        <button className="btn btn-primary" onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>
+                            {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : '💾 Salvar'}
                         </button>
+
                     </>
                 }
             >

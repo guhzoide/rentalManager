@@ -61,40 +61,41 @@ export function EstoquePage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Partial<EstoqueItem> | null>(null);
     const [form, setForm] = useState<Omit<EstoqueItem, 'id'>>(EMPTY);
-    const [rows, setRows] = useState<EstoqueItem[]>([]);
-    const [total, setTotal] = useState(0);
 
-    const readMutation = trpc.service.read.useMutation({
-        onSuccess: (res: any) => { setRows(res.data); setTotal(res.total); },
+    const utils = trpc.useUtils();
+
+    const { data: estoqueData, isLoading: isLoadingList } = trpc.estoque.list.useQuery({
+        pagina: page,
+        limit: 20
     });
 
-    const saveMutation = trpc.service.create.useMutation({
+    const createMutation = trpc.estoque.create.useMutation({
         onSuccess: () => {
             toast.success('Item salvo com sucesso!');
-            fetchItems();
-            setTimeout(() => { setModalOpen(false); }, 1200);
+            utils.estoque.list.invalidate();
+            setTimeout(() => { setModalOpen(false); }, 500);
         },
         onError: (err) => toast.error(err.message),
     });
 
-    const deleteMutation = trpc.service.delete.useMutation({
-        onSuccess: () => fetchItems(),
+    const updateMutation = trpc.estoque.update.useMutation({
+        onSuccess: () => {
+            toast.success('Item atualizado com sucesso!');
+            utils.estoque.list.invalidate();
+            setTimeout(() => { setModalOpen(false); }, 500);
+        },
+        onError: (err) => toast.error(err.message),
     });
 
-    const fetchItems = (p = page) => {
-        readMutation.mutate(
-            {
-                table: 'estoques',
-                pagina: p,
-                limit: 20
-            },
-            {
-                onError: (err) => toast.error(err.message)
-            }
-        );
-    };
+    const deleteMutation = trpc.estoque.delete.useMutation({
+        onSuccess: () => {
+            toast.success('Item removido!');
+            utils.estoque.list.invalidate();
+            setModalOpen(false);
+        },
+        onError: (err) => toast.error(err.message),
+    });
 
-    useEffect(() => { fetchItems(1); }, []);
 
     const openAdd = () => {
         setEditing(null);
@@ -110,15 +111,14 @@ export function EstoquePage() {
     };
 
     const handleSave = () => {
-        const payload = {
-            id: editing?.id ? editing.id : undefined,
-            ...form
-        };
-
-        saveMutation.mutate({
-            table: 'estoques',
-            Itens: payload,
-        });
+        if (editing?.id) {
+            updateMutation.mutate({
+                id: editing.id,
+                data: form
+            });
+        } else {
+            createMutation.mutate(form);
+        }
     };
 
     const numField = (key: keyof Omit<EstoqueItem, 'id' | 'nome' | 'ativo'>, label: string, suffix: string, step = "0.01") => (
@@ -145,16 +145,16 @@ export function EstoquePage() {
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <DataGrid
                 columns={columns}
-                data={rows}
-                loading={readMutation.isPending}
+                data={estoqueData?.data || []}
+                loading={isLoadingList}
                 onRowClick={openEdit}
                 onAdd={openAdd}
-                total={total}
+                total={estoqueData?.total || 0}
                 page={page}
-                onPageChange={(p) => { setPage(p); fetchItems(p); }}
+                onPageChange={(p) => setPage(p)}
                 pageSize={20}
                 emptyText="Nenhum item no estoque."
-                onRefresh={() => fetchItems(page)}
+                onRefresh={() => utils.estoque.list.invalidate()}
             />
 
             <Modal
@@ -163,23 +163,24 @@ export function EstoquePage() {
                 onClose={() => setModalOpen(false)}
                 footer={
                     <>
-                        {editing && (
+                        {editing?.id && (
                             <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => {
                                     if (confirm('Remover este item?')) {
-                                        deleteMutation.mutate({ table: 'estoques', Filtros: { id: editing.id } });
-                                        setModalOpen(false);
+                                        deleteMutation.mutate({ id: editing.id as number });
                                     }
                                 }}
                             >
                                 🗑 Remover
                             </button>
                         )}
+
                         <button className="btn btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-                        <button className="btn btn-primary" onClick={handleSave} disabled={saveMutation.isPending}>
-                            {saveMutation.isPending ? 'Salvando...' : '💾 Salvar'}
+                        <button className="btn btn-primary" onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>
+                            {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : '💾 Salvar'}
                         </button>
+
                     </>
                 }
             >
