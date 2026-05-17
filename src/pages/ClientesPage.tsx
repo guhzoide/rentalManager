@@ -38,6 +38,7 @@ const addressColumns: Column<Endereco>[] = [
     { key: 'cep', label: 'CEP', width: '100px' },
     { key: 'bairro', label: 'Bairro' },
     { key: 'rua', label: 'Rua' },
+    { key: 'bairro', label: 'Bairro' },
     { key: 'numero', label: 'Nº', width: '80px' },
     { key: 'complemento', label: 'Complemento', width: '130px' },
 ];

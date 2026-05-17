@@ -3,37 +3,38 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
 model agendas {
-  id         Int       @id @default(autoincrement())
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
   data       DateTime
-  itemId     Int
-  clienteId  Int
-  enderecoId Int
+  itemId     String    @db.ObjectId
+  clienteId  String    @db.ObjectId
+  enderecoId String    @db.ObjectId
   observacao String?
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime
+  updatedAt  DateTime  @updatedAt
   clientes   clientes  @relation(fields: [clienteId], references: [id])
   enderecos  enderecos @relation(fields: [enderecoId], references: [id])
   estoques   estoques  @relation(fields: [itemId], references: [id])
 }
 
 model clientes {
-  id        Int         @id @default(autoincrement())
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
   nome      String
   cpf       String?
   contato   String
   createdAt DateTime    @default(now())
-  updatedAt DateTime
+  updatedAt DateTime    @updatedAt
   agendas   agendas[]
   enderecos enderecos[]
 }
 
 model enderecos {
-  id          Int       @id @default(autoincrement())
-  clienteId   Int
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  clienteId   String    @db.ObjectId
   cep         String
   bairro      String?
   rua         String
@@ -41,13 +42,13 @@ model enderecos {
   complemento String?
   principal   Boolean   @default(false)
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime  @updatedAt
   agendas     agendas[]
   clientes    clientes  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
 
 model estoques {
-  id          Int       @id @default(autoincrement())
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
   nome        String
   peso        Float
   largura     Float
@@ -55,17 +56,18 @@ model estoques {
   valorDiaria Float
   ativo       Boolean   @default(true)
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime  @updatedAt
   quantidade  Int       @default(0)
+  disponivel  Int       @default(0)
   agendas     agendas[]
 }
 
 model usuarios {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   nome      String
   loginName String   @unique
   email     String   @unique
   senha     String
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
 }

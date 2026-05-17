@@ -3,6 +3,7 @@ import { trpc } from '@/lib/trpc';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { toast } from 'react-toastify';
+import { DataGrid, Column } from '@/components/ui/DataGrid';
 
 dayjs.locale('pt-br');
 
@@ -10,19 +11,13 @@ interface AgendaItem {
     id: number;
     data: string;
     observacao?: string;
-    estoques: { id: number; nome: string };
-    clientes: { id: number; nome: string };
-    enderecos: { id: number; rua: string; numero: string; cep: string };
+    item: { id: number; nome: string };
+    cliente: { id: number; nome: string };
+    endereco: { id: number; rua: string; numero: string; cep: string };
 }
 
-interface SelectEndereco {
-    id: number;
-    rua: string;
-    numero: string;
-    cep: string;
-    clienteId: number;
-    complemento?: string | null;
-}
+interface SelectItem { id: number; nome: string; }
+interface SelectEndereco { id: number; rua: string; numero: string; cep: string; clienteId: number; }
 
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = [
@@ -30,10 +25,17 @@ const MONTHS = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
+const agendaColumns: Column<AgendaItem>[] = [
+    { key: 'item', label: 'Item', render: (_, row) => row.item?.nome },
+    { key: 'cliente', label: 'Cliente', render: (_, row) => row.cliente?.nome },
+    { key: 'observacao', label: 'Observações', render: (_, row) => row.observacao || '—' },
+];
+
 export function AgendaPage() {
     const today = dayjs();
     const [current, setCurrent] = useState(today);
     const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
+    const [agendas, setAgendas] = useState<AgendaItem[]>([]);
     const [selectedAgenda, setSelectedAgenda] = useState<AgendaItem | null>(null);
 
     // Form state
@@ -42,80 +44,77 @@ export function AgendaPage() {
     const [enderecoId, setEnderecoId] = useState('');
     const [observacao, setObservacao] = useState('');
 
-    const [formMode, setFormMode] = useState<'view' | 'new' | 'edit'>('view');
-
+    // Combos data
+    const [itens, setItens] = useState<SelectItem[]>([]);
+    const [clientes, setClientes] = useState<SelectItem[]>([]);
+    const [enderecos, setEnderecos] = useState<SelectEndereco[]>([]);
     const [filteredEnderecos, setFilteredEnderecos] = useState<SelectEndereco[]>([]);
-
-    const utils = trpc.useUtils();
-
-    // Queries (Combos)
-    const { data: itensRes } = trpc.estoque.list.useQuery({ limit: 20 });
-    const { data: clientesRes } = trpc.clientes.list.useQuery({ limit: 20 });
-    const { data: enderecosRes } = trpc.enderecos.byClienteId.useQuery(
-        { clienteId: Number(clienteId) },
-        { enabled: !!clienteId }
-    );
-
-    const itens = itensRes?.data || [];
-    const clientes = clientesRes?.data || [];
-
-    // Query (Agenda do mês)
-    const { data: agendaRes, isLoading: isLoadingAgenda } = trpc.agendas.list.useQuery({
-        filtros: {
-            data: {
-                gte: current.startOf('month').toISOString(),
-                lte: current.endOf('month').toISOString(),
-            }
-        },
-        limit: 100
-    });
-
-    const agendas = (agendaRes?.data || []) as unknown as AgendaItem[];
+    const [formMode, setFormMode] = useState<'view' | 'list' | 'new' | 'edit'>('view');
 
     // Mutations
-    const createMutation = trpc.agendas.create.useMutation({
-        onSuccess: () => {
-            toast.success('Agendamento salvo!');
-            utils.agendas.list.invalidate();
-        },
-        onError: (err) => toast.error(err.message),
+    const readMutation = trpc.service.read.useMutation({
+        onSuccess: (res: any) => setAgendas(res.data),
     });
 
-    const updateMutation = trpc.agendas.update.useMutation({
-        onSuccess: () => {
-            toast.success('Agendamento atualizado!');
-            utils.agendas.list.invalidate();
-        },
-        onError: (err) => toast.error(err.message),
+    const readItensMutation = trpc.service.read.useMutation({
+        onSuccess: (res: any) => setItens(res.data),
     });
 
-    const deleteMutation = trpc.agendas.delete.useMutation({
+    const readClientesMutation = trpc.service.read.useMutation({
+        onSuccess: (res: any) => setClientes(res.data),
+    });
+
+    const readEnderecosMutation = trpc.service.read.useMutation({
+        onSuccess: (res: any) => setEnderecos(res.data),
+    });
+
+    const saveMutation = trpc.service.create.useMutation({
+        onSuccess: (res: any) => {
+            toast.success('Agendamento salvo com sucesso!', { theme: 'colored' });
+            fetchAgendas();
+        },
+        onError: (err) => toast.error(`Erro: ${err.message}`, { theme: 'colored' }),
+    });
+
+    const deleteMutation = trpc.service.delete.useMutation({
         onSuccess: () => {
-            toast.success('Agendamento removido!');
             setSelectedAgenda(null);
-            setFormMode('view');
-            utils.agendas.list.invalidate();
+            setFormMode('list');
+            fetchAgendas();
         },
-        onError: (err) => toast.error(err.message),
     });
 
+    const fetchAgendas = () => {
+        const startOfMonth = current.startOf('month').toISOString();
+        const endOfMonth = current.endOf('month').toISOString();
+        readMutation.mutate({
+            table: 'agendas',
+            filtros: { data: { gte: startOfMonth, lte: endOfMonth } },
+            include: { estoques: true, clientes: true, enderecos: true },
+            limit: 100,
+        });
+    };
 
-    // Filtra endereços pelo cliente selecionado dinamicamente
+    const fetchCombos = () => {
+        readItensMutation.mutate({ table: 'estoques', limit: 200 });
+        readClientesMutation.mutate({ table: 'clientes', limit: 200 });
+        readEnderecosMutation.mutate({ table: 'enderecos', limit: 500 });
+    };
+
+    useEffect(() => { fetchCombos(); }, []);
+    useEffect(() => { fetchAgendas(); }, [current]);
+
+    // Filtra endereços pelo cliente selecionado
     useEffect(() => {
         if (!clienteId) {
             setFilteredEnderecos([]);
             setEnderecoId('');
         } else {
-            const filtered = (enderecosRes || []) as unknown as SelectEndereco[];
+            const filtered = enderecos.filter((e) => e.clienteId === Number(clienteId));
             setFilteredEnderecos(filtered);
-            
-            // Só reseta o endereço se o endereço selecionado atualmente não for válido para o cliente
-            const isValid = filtered.some((e) => String(e.id) === enderecoId);
-            if (!isValid) {
-                setEnderecoId('');
-            }
+            setEnderecoId('');
         }
-    }, [clienteId, enderecosRes, enderecoId]);
+    }, [clienteId, enderecos]);
 
     // Mapa de datas com eventos
     const eventDates = new Set(agendas.map((a) => dayjs(a.data).format('YYYY-MM-DD')));
@@ -145,49 +144,51 @@ export function AgendaPage() {
         return days;
     };
 
-    const days = buildCalendarDays();
-
     const handleDayClick = (date: dayjs.Dayjs) => {
         setSelectedDate(date);
+        setFormMode('list');
+    };
 
-        // Verifica se já tem agendamento nessa data
-        const existing = agendas.find((a) => dayjs(a.data).format('YYYY-MM-DD') === date.format('YYYY-MM-DD'));
+    const handleAddClick = () => {
+        setSelectedAgenda(null);
+        setItemId('');
+        setClienteId('');
+        setEnderecoId('');
+        setObservacao('');
+        setFormMode('new');
+    };
 
-        if (existing) {
-            setSelectedAgenda(existing);
-            setItemId(String(existing.estoques.id));
-            setClienteId(String(existing.clientes.id));
-            setEnderecoId(String(existing.enderecos.id));
-            setObservacao(existing.observacao || '');
-            setFormMode('edit');
-        } else {
-            setSelectedAgenda(null);
-            setItemId('');
-            setClienteId('');
-            setEnderecoId('');
-            setObservacao('');
-            setFormMode('new');
-        }
+    const handleEditClick = (row: AgendaItem) => {
+        setSelectedAgenda(row);
+        setItemId(String(row.item.id));
+        setClienteId(String(row.cliente.id));
+        setEnderecoId(String(row.endereco.id));
+        setObservacao(row.observacao || '');
+        setFormMode('edit');
     };
 
     const handleSave = () => {
-        if (!selectedDate) return;
+        if (!selectedDate || !itemId || !clienteId || !enderecoId) {
+            toast.error('Preencha todos os campos obrigatórios.', { theme: 'colored' });
+            return;
+        }
 
-        const payload = {
-            data: selectedDate.toDate(),
+        const payload: any = {
+            data: selectedDate.toISOString(),
             itemId: Number(itemId),
             clienteId: Number(clienteId),
             enderecoId: Number(enderecoId),
             observacao,
         };
 
-        if (selectedAgenda?.id) {
-            updateMutation.mutate({ id: selectedAgenda.id, data: payload });
-        } else {
-            createMutation.mutate(payload);
-        }
+        if (selectedAgenda?.id) payload.id = selectedAgenda.id;
+
+        saveMutation.mutate({ table: 'agendas', Itens: payload }, {
+            onSuccess: () => setFormMode('list')
+        });
     };
 
+    const days = buildCalendarDays();
 
     return (
         <div className="page-inner">
@@ -251,8 +252,30 @@ export function AgendaPage() {
                     </div>
                 </div>
 
+                {/* List */}
+                {formMode === 'list' && selectedDate && (
+                    <div className="agenda-form-card">
+                        <div className="agenda-form-title">
+                            Agendamentos do Dia
+                            {' — '}
+                            <span style={{ color: 'var(--accent-hover)', fontWeight: 400 }}>
+                                {selectedDate.format('DD/MM/YYYY')}
+                            </span>
+                        </div>
+                        <div style={{ marginTop: 16 }}>
+                            <DataGrid
+                                columns={agendaColumns}
+                                data={agendas.filter(a => dayjs(a.data).format('YYYY-MM-DD') === selectedDate.format('YYYY-MM-DD'))}
+                                onAdd={handleAddClick}
+                                onRowClick={handleEditClick}
+                                emptyText="Nenhum agendamento para esta data."
+                            />
+                        </div>
+                    </div>
+                )}
+
                 {/* Form */}
-                {formMode !== 'view' && selectedDate && (
+                {(formMode === 'new' || formMode === 'edit') && selectedDate && (
                     <div className="agenda-form-card">
                         <div className="agenda-form-title">
                             {formMode === 'new' ? '➕ Novo Agendamento' : '✏️ Editar Agendamento'}
@@ -308,7 +331,7 @@ export function AgendaPage() {
                                     </option>
                                     {filteredEnderecos.map((e) => (
                                         <option key={e.id} value={e.id}>
-                                            {e.rua}, {e.numero} {e.complemento ? `(${e.complemento})` : ''} — CEP {e.cep}
+                                            {e.rua}, {e.numero} — CEP {e.cep}
                                         </option>
                                     ))}
                                 </select>
@@ -328,33 +351,31 @@ export function AgendaPage() {
                         </div>
 
                         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-                            {selectedAgenda?.id && (
+                            {formMode === 'edit' && selectedAgenda && (
                                 <button
                                     className="btn btn-danger"
                                     onClick={() => {
                                         if (confirm('Remover este agendamento?')) {
-                                            deleteMutation.mutate({ id: selectedAgenda.id as number });
+                                            deleteMutation.mutate({ table: 'agendas', Filtros: { id: selectedAgenda.id } });
                                         }
                                     }}
                                 >
                                     🗑 Remover
                                 </button>
                             )}
-
                             <button
                                 className="btn btn-ghost"
-                                onClick={() => { setFormMode('view'); setSelectedDate(null); }}
+                                onClick={() => setFormMode('list')}
                             >
                                 Cancelar
                             </button>
                             <button
                                 className="btn btn-primary"
                                 onClick={handleSave}
-                                disabled={createMutation.isPending || updateMutation.isPending}
+                                disabled={saveMutation.isPending}
                             >
-                                {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : '💾 Salvar'}
+                                {saveMutation.isPending ? 'Salvando...' : '💾 Salvar'}
                             </button>
-
                         </div>
                     </div>
                 )}
