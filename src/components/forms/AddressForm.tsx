@@ -1,97 +1,186 @@
+import { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import TextField from '@mui/material/TextField';
 import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import { z } from 'zod';
+import { enderecoSchema, type EnderecoInput } from '@/lib/schemas';
 
-interface EnderecoFormState {
-    cep: string;
-    numero: string;
-    bairro: string;
-    rua: string;
-    complemento: string;
-    principal: boolean;
-}
+// AddressForm usa um subconjunto do enderecoSchema (sem clienteId, gerenciado pela page)
+const addressFormSchema = enderecoSchema.omit({ clienteId: true });
+type AddressFormValues = z.infer<typeof addressFormSchema>;
 
 interface AddressFormProps {
-    form: EnderecoFormState;
-    onChange: (form: EnderecoFormState) => void;
+    defaultValues?: Partial<AddressFormValues>;
+    onSubmit: (data: AddressFormValues) => void;
     onCepChange: (cep: string) => void;
     cepLoading: boolean;
+    // Permite que a page injete valores via ViaCEP
+    onRuaBairroFetched?: (rua: string, bairro: string) => void;
 }
 
 export function AddressForm({
-    form,
-    onChange,
+    defaultValues,
+    onSubmit,
     onCepChange,
     cepLoading,
 }: AddressFormProps) {
+    const {
+        control,
+        handleSubmit,
+        reset,
+        setValue,
+        formState: { errors },
+    } = useForm<AddressFormValues>({
+        resolver: zodResolver(addressFormSchema),
+        defaultValues: {
+            cep: '',
+            rua: '',
+            numero: '',
+            bairro: '',
+            complemento: '',
+            principal: false,
+            ...defaultValues,
+        },
+    });
+
+    useEffect(() => {
+        reset({
+            cep: '',
+            rua: '',
+            numero: '',
+            bairro: '',
+            complemento: '',
+            principal: false,
+            ...defaultValues,
+        });
+    }, [JSON.stringify(defaultValues)]);
+
     return (
-        <div className="form-grid single">
-            <div className="form-group">
-                <TextField
-                    label="CEP"
-                    variant="outlined"
-                    fullWidth
-                    value={form.cep}
-                    onChange={(e) => {
-                        onChange({ ...form, cep: e.target.value });
-                        onCepChange(e.target.value);
-                    }}
-                    slotProps={{ htmlInput: { maxLength: 9 } }}
-                    placeholder="00000-000"
-                />
-            </div>
+        <form id="address-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+            <div className="form-grid single">
+                {/* CEP */}
+                <div className="form-group">
+                    <Controller
+                        name="cep"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="CEP *"
+                                variant="outlined"
+                                fullWidth
+                                placeholder="00000-000"
+                                error={!!errors.cep}
+                                helperText={errors.cep?.message}
+                                slotProps={{ htmlInput: { maxLength: 9 } }}
+                                onChange={(e) => {
+                                    field.onChange(e);
+                                    onCepChange(e.target.value);
+                                }}
+                            />
+                        )}
+                    />
+                </div>
 
-            <div className="form-group">
-                <TextField
-                    label="Número"
-                    variant="outlined"
-                    fullWidth
-                    value={form.numero}
-                    onChange={(e) => onChange({ ...form, numero: e.target.value })}
-                    placeholder="123"
-                />
-            </div>
+                {/* Número */}
+                <div className="form-group">
+                    <Controller
+                        name="numero"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="Número *"
+                                variant="outlined"
+                                fullWidth
+                                placeholder="123"
+                                error={!!errors.numero}
+                                helperText={errors.numero?.message}
+                            />
+                        )}
+                    />
+                </div>
 
-            <div className="form-group">
-                <TextField
-                    label="Bairro"
-                    variant="outlined"
-                    fullWidth
-                    value={form.bairro}
-                    onChange={(e) => onChange({ ...form, bairro: e.target.value })}
-                    placeholder="Bairro"
-                />
-            </div>
+                {/* Bairro */}
+                <div className="form-group">
+                    <Controller
+                        name="bairro"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                value={field.value ?? ''}
+                                label="Bairro"
+                                variant="outlined"
+                                fullWidth
+                                placeholder="Bairro"
+                                error={!!errors.bairro}
+                                helperText={errors.bairro?.message}
+                            />
+                        )}
+                    />
+                </div>
 
-            <div className="form-group">
-                <TextField
-                    label="Rua"
-                    variant="outlined"
-                    fullWidth
-                    value={form.rua}
-                    onChange={(e) => onChange({ ...form, rua: e.target.value })}
-                    placeholder="Nome da rua"
-                    helperText={cepLoading ? "Buscando endereço..." : ""}
-                />
-            </div>
+                {/* Rua */}
+                <div className="form-group">
+                    <Controller
+                        name="rua"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="Rua *"
+                                variant="outlined"
+                                fullWidth
+                                placeholder="Nome da rua"
+                                error={!!errors.rua}
+                                helperText={cepLoading ? 'Buscando endereço...' : errors.rua?.message}
+                            />
+                        )}
+                    />
+                </div>
 
-            <div className="form-group">
-                <TextField
-                    label="Complemento (Ex: Ap 12, Bloco B)"
-                    variant="outlined"
-                    fullWidth
-                    value={form.complemento}
-                    onChange={(e) => onChange({ ...form, complemento: e.target.value })}
-                    placeholder="Complemento"
-                />
-            </div>
+                {/* Complemento */}
+                <div className="form-group">
+                    <Controller
+                        name="complemento"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                value={field.value ?? ''}
+                                label="Complemento (Ex: Ap 12, Bloco B)"
+                                variant="outlined"
+                                fullWidth
+                                placeholder="Complemento"
+                                error={!!errors.complemento}
+                                helperText={errors.complemento?.message}
+                            />
+                        )}
+                    />
+                </div>
 
-            <div className="form-group">
-                <span>Principal</span>
-                <Switch
-                    checked={form.principal}
-                    onChange={(e) => onChange({ ...form, principal: e.target.checked })}
-                />
+                {/* Principal */}
+                <div className="form-group">
+                    <Controller
+                        name="principal"
+                        control={control}
+                        render={({ field }) => (
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={field.value}
+                                        onChange={(e) => field.onChange(e.target.checked)}
+                                    />
+                                }
+                                label="Endereço Principal"
+                            />
+                        )}
+                    />
+                </div>
             </div>
-        </div>
+        </form>
     );
 }

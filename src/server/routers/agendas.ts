@@ -3,23 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { protectedProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
-
-const agendaItemInputSchema = z.object({
-    itemId: z.string(),
-    quantidade: z.number().int().min(1),
-});
-
-const agendaInputSchema = z.object({
-    data: z.coerce.date(),
-    dataColeta: z.coerce.date(),
-    clienteId: z.string(),
-    enderecoId: z.string(),
-    observacao: z.string().optional(),
-    itens: z.array(agendaItemInputSchema).min(1, "Adicione pelo menos um item"),
-    desconto: z.number().min(0).max(100).default(0),
-    valorTotal: z.number().min(0).default(0),
-});
-
+import { agendaSchema } from '../../lib/schemas';
 import { type agendas } from '@prisma/client';
 
 export const agendaRouter = router({
@@ -40,7 +24,7 @@ export const agendaRouter = router({
         }),
 
     create: protectedProcedure
-        .input(agendaInputSchema)
+        .input(agendaSchema)
         .mutation(async ({ input }) => {
             return prisma.$transaction(async (tx) => {
                 // Decrementar quantidade disponível de cada item selecionado
@@ -86,7 +70,7 @@ export const agendaRouter = router({
     update: protectedProcedure
         .input(z.object({
             id: z.string(),
-            data: agendaInputSchema.partial(),
+            data: agendaSchema.partial(),
         }))
         .mutation(async ({ input }) => {
             return prisma.$transaction(async (tx) => {

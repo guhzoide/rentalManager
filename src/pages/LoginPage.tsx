@@ -258,14 +258,14 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     color: var(--text-primary);
                     letter-spacing: -0.3px;
                     margin: 0;
-                    animation: login-field-in 0.5s ease 0.35s both;
+                    animation: login-field-in 0.5s ease 0.35s backwards;
                 }
 
                 .login-logo-sub {
                     font-size: 13px;
                     color: var(--text-secondary);
                     margin: 0;
-                    animation: login-field-in 0.5s ease 0.45s both;
+                    animation: login-field-in 0.5s ease 0.45s backwards;
                 }
 
                 /* Form fields */
@@ -281,9 +281,9 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     gap: 6px;
                 }
 
-                .login-field:nth-child(1) { animation: login-field-in 0.45s ease 0.5s both; }
-                .login-field:nth-child(2) { animation: login-field-in 0.45s ease 0.6s both; }
-                .login-field:nth-child(3) { animation: login-field-in 0.45s ease 0.7s both; }
+                .login-field:nth-child(1) { animation: login-field-in 0.45s ease 0.5s backwards; }
+                .login-field:nth-child(2) { animation: login-field-in 0.45s ease 0.6s backwards; }
+                .login-field:nth-child(3) { animation: login-field-in 0.45s ease 0.7s backwards; }
 
                 .login-label {
                     font-size: 11.5px;
@@ -347,7 +347,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
                 /* Submit button */
                 .login-submit-wrap {
-                    animation: login-field-in 0.45s ease 0.75s both;
+                    animation: login-field-in 0.45s ease 0.75s backwards;
                 }
 
                 .login-btn {
@@ -397,7 +397,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     color: var(--text-muted);
                     border-top: 1px solid rgba(96,165,250,0.1);
                     padding-top: 16px;
-                    animation: login-field-in 0.45s ease 0.85s both;
+                    animation: login-field-in 0.45s ease 0.85s backwards;
                 }
 
                 .login-link {

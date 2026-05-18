@@ -4,6 +4,8 @@ import { DataGrid, Column } from '@/components/ui/DataGrid';
 import { Modal } from '@/components/ui/Modal';
 import { UsuarioForm } from '@/components/forms/UsuarioForm';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { toast } from 'react-toastify';
+import type { UsuarioCreateInput } from '@/lib/schemas';
 
 interface Usuario {
     id: string;
@@ -12,8 +14,6 @@ interface Usuario {
     atendente: boolean;
     whatsapp?: string | null;
 }
-
-const EMPTY = { nome: '', email: '', senha: '', atendente: false, whatsapp: '' };
 
 const columns: Column<Usuario>[] = [
     { key: 'nome', label: 'Nome' },
@@ -29,7 +29,7 @@ export function UsuariosPage() {
     const [page, setPage] = useState(1);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Partial<Usuario> | null>(null);
-    const [form, setForm] = useState(EMPTY);
+    const [formKey, setFormKey] = useState(0); // força reset do form ao abrir
 
     // Confirmation Modal State
     const [confirmModal, setConfirmModal] = useState<{
@@ -55,8 +55,6 @@ export function UsuariosPage() {
             }
         });
     };
-    const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-
 
     const utils = trpc.useUtils();
 
@@ -67,62 +65,58 @@ export function UsuariosPage() {
 
     const createMutation = trpc.usuarios.create.useMutation({
         onSuccess: () => {
-            setStatus({ type: 'success', msg: 'Usuário cadastrado com sucesso!' });
+            toast.success('Usuário cadastrado com sucesso!');
             utils.usuarios.list.invalidate();
-            setTimeout(() => { setModalOpen(false); setStatus(null); }, 1200);
+            setModalOpen(false);
         },
-        onError: (err) => setStatus({ type: 'error', msg: err.message }),
+        onError: (err) => toast.error(err.message),
     });
 
     const updateMutation = trpc.usuarios.update.useMutation({
         onSuccess: () => {
-            setStatus({ type: 'success', msg: 'Usuário atualizado com sucesso!' });
+            toast.success('Usuário atualizado com sucesso!');
             utils.usuarios.list.invalidate();
-            setTimeout(() => { setModalOpen(false); setStatus(null); }, 1200);
+            setModalOpen(false);
         },
-        onError: (err) => setStatus({ type: 'error', msg: err.message }),
+        onError: (err) => toast.error(err.message),
     });
 
     const deleteMutation = trpc.usuarios.delete.useMutation({
         onSuccess: () => {
+            toast.success('Usuário removido!');
             utils.usuarios.list.invalidate();
         },
-        onError: (err) => setStatus({ type: 'error', msg: err.message }),
+        onError: (err) => toast.error(err.message),
     });
-
 
     const openAdd = () => {
         setEditing(null);
-        setForm(EMPTY);
-        setStatus(null);
+        setFormKey(k => k + 1);
         setModalOpen(true);
     };
 
     const openEdit = (row: Usuario) => {
         setEditing(row);
-        setForm({ nome: row.nome, email: row.email, senha: '', atendente: row.atendente, whatsapp: row.whatsapp || '' });
-        setStatus(null);
+        setFormKey(k => k + 1);
         setModalOpen(true);
     };
 
-    const handleSave = () => {
+    const handleFormSubmit = (data: UsuarioCreateInput & { senha?: string }) => {
         if (editing?.id) {
             const updateData: any = {
-                nome: form.nome,
-                email: form.email,
-                atendente: (form as any).atendente,
-                whatsapp: (form as any).whatsapp || null,
+                nome: data.nome,
+                email: data.email,
+                atendente: data.atendente,
+                whatsapp: data.whatsapp || null,
             };
-            if (form.senha) updateData.senha = form.senha;
-
-            updateMutation.mutate({
-                id: editing.id,
-                data: updateData
-            });
+            if (data.senha) updateData.senha = data.senha;
+            updateMutation.mutate({ id: editing.id, data: updateData });
         } else {
-            createMutation.mutate(form as any);
+            createMutation.mutate(data as any);
         }
     };
+
+    const isPending = createMutation.isPending || updateMutation.isPending;
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -162,23 +156,33 @@ export function UsuariosPage() {
                                 🗑 Remover
                             </button>
                         )}
-
                         <button className="btn btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-                        <button className="btn btn-primary" onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>
-                            {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : '💾 Salvar'}
+                        {/* O botão Salvar submete o form pelo atributo form= */}
+                        <button
+                            className="btn btn-primary"
+                            type="submit"
+                            form="usuario-form"
+                            disabled={isPending}
+                        >
+                            {isPending ? 'Salvando...' : '💾 Salvar'}
                         </button>
-
                     </>
                 }
             >
-                {status && (
-                    <div className={`status-bar ${status.type}`}>
-                        {status.type === 'success' ? '✅' : '❌'} {status.msg}
-                    </div>
-                )}
-
-                <UsuarioForm form={form} onChange={setForm} isEditing={!!editing?.id} />
+                <UsuarioForm
+                    key={formKey}
+                    defaultValues={editing ? {
+                        nome: editing.nome || '',
+                        email: editing.email || '',
+                        senha: '',
+                        atendente: editing.atendente ?? false,
+                        whatsapp: editing.whatsapp || '',
+                    } : undefined}
+                    isEditing={!!editing?.id}
+                    onSubmit={handleFormSubmit}
+                />
             </Modal>
+
             <ConfirmationModal
                 isOpen={confirmModal.isOpen}
                 title={confirmModal.title}

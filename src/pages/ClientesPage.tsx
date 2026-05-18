@@ -6,6 +6,8 @@ import { toast } from 'react-toastify';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddressForm } from '@/components/forms/AddressForm';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import type { ClienteInput } from '@/lib/schemas';
+
 
 interface Cliente {
     id: string;
@@ -25,10 +27,6 @@ interface Endereco {
     principal: boolean;
 }
 
-const EMPTY: Omit<Cliente, 'id'> = {
-    nome: '', cpf: '', contato: '',
-};
-
 const columns: Column<Cliente>[] = [
     { key: 'nome', label: 'Nome' },
     { key: 'cpf', label: 'CPF', width: '130px' },
@@ -39,110 +37,70 @@ export function ClientesPage() {
     const [page, setPage] = useState(1);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Partial<Cliente> | null>(null);
-    const [form, setForm] = useState<Omit<Cliente, 'id'>>(EMPTY);
+    const [formKey, setFormKey] = useState(0);
 
-    // Confirmation Modal State
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean;
         title: string;
         message: string;
         onConfirm: () => void;
-    }>({
-        isOpen: false,
-        title: '',
-        message: '',
-        onConfirm: () => {},
-    });
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
     const triggerConfirm = (title: string, message: string, onConfirm: () => void) => {
         setConfirmModal({
-            isOpen: true,
-            title,
-            message,
-            onConfirm: () => {
-                onConfirm();
-                setConfirmModal(prev => ({ ...prev, isOpen: false }));
-            }
+            isOpen: true, title, message,
+            onConfirm: () => { onConfirm(); setConfirmModal(prev => ({ ...prev, isOpen: false })); }
         });
     };
 
     // Endereços Adicionais States
     const [addressModalOpen, setAddressModalOpen] = useState(false);
     const [editingAddress, setEditingAddress] = useState<Partial<Endereco> | null>(null);
-    const [addressForm, setAddressForm] = useState({ cep: '', rua: '', numero: '', bairro: '', complemento: '', principal: false });
+    const [addressFormKey, setAddressFormKey] = useState(0);
     const [addrCepLoading, setAddrCepLoading] = useState(false);
 
     const utils = trpc.useUtils();
 
-    // Query de clientes
-    const { data: clientesData, isLoading: isLoadingList } = trpc.clientes.list.useQuery({
-        limit: 20
-    });
+    const { data: clientesData, isLoading: isLoadingList } = trpc.clientes.list.useQuery({ limit: 20 });
 
-    // Query de endereços do cliente sendo editado
     const { data: addressesData, isLoading: isLoadingAddresses } = trpc.enderecos.byClienteId.useQuery(
         { clienteId: editing?.id as string },
         { enabled: !!editing?.id }
     );
 
-    // Filtra os endereços para exibir apenas os adicionais (excluindo o Principal que está no form principal)
     const additionalAddresses = (addressesData || []).filter(addr => addr.complemento !== 'Principal');
 
-    // Mutations Clientes
     const createMutation = trpc.clientes.create.useMutation({
-        onSuccess: () => {
-            toast.success('Cliente cadastrado com sucesso!');
-            utils.clientes.list.invalidate();
-            setModalOpen(false);
-        },
+        onSuccess: () => { toast.success('Cliente cadastrado com sucesso!'); utils.clientes.list.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const updateMutation = trpc.clientes.update.useMutation({
-        onSuccess: () => {
-            toast.success('Cliente atualizado com sucesso!');
-            utils.clientes.list.invalidate();
-            setModalOpen(false);
-        },
+        onSuccess: () => { toast.success('Cliente atualizado com sucesso!'); utils.clientes.list.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const deleteMutation = trpc.clientes.delete.useMutation({
-        onSuccess: () => {
-            toast.success('Cliente removido!');
-            utils.clientes.list.invalidate();
-            setModalOpen(false);
-        },
+        onSuccess: () => { toast.success('Cliente removido!'); utils.clientes.list.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
-    // Mutations Endereços Adicionais
     const createAddressMutation = trpc.enderecos.create.useMutation({
-        onSuccess: () => {
-            toast.success('Endereço adicionado com sucesso!');
-            utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string });
-            setAddressModalOpen(false);
-        },
+        onSuccess: () => { toast.success('Endereço adicionado!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); setAddressModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const updateAddressMutation = trpc.enderecos.update.useMutation({
-        onSuccess: () => {
-            toast.success('Endereço atualizado com sucesso!');
-            utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string });
-            setAddressModalOpen(false);
-        },
+        onSuccess: () => { toast.success('Endereço atualizado!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); setAddressModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const deleteAddressMutation = trpc.enderecos.delete.useMutation({
-        onSuccess: () => {
-            toast.success('Endereço removido com sucesso!');
-            utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string });
-            setAddressModalOpen(false);
-        },
+        onSuccess: () => { toast.success('Endereço removido!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); setAddressModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
+
+    const [_addrViaCep, _setAddrViaCep] = useState<{ cep: string; rua: string; bairro: string } | null>(null);
 
     const fetchAddrCep = async (cep: string) => {
         const clean = cep.replace(/\D/g, '');
@@ -152,74 +110,54 @@ export function ClientesPage() {
             const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
             const data = await res.json();
             if (!data.erro) {
-                setAddressForm((f) => ({ ...f, rua: data.logradouro || f.rua, bairro: data.bairro || f.bairro }));
+                _setAddrViaCep({ cep, rua: data.logradouro || '', bairro: data.bairro || '' });
+                setAddressFormKey(k => k + 1);
             }
         } catch { /* silencioso */ }
         setAddrCepLoading(false);
     };
 
-    const openAdd = () => {
-        setEditing(null);
-        setForm(EMPTY);
-        setModalOpen(true);
-    };
+    const openAdd = () => { setEditing(null); setFormKey(k => k + 1); setModalOpen(true); };
 
     const openEdit = (row: Cliente) => {
         setEditing(row);
-        const { id: _id, ...rest } = row;
-        setForm(rest);
+        setFormKey(k => k + 1);
         setModalOpen(true);
     };
 
-    const handleSave = () => {
+    const handleClientSubmit = (data: ClienteInput) => {
         if (editing?.id) {
-            updateMutation.mutate({
-                id: editing.id,
-                data: form
-            });
+            updateMutation.mutate({ id: editing.id, data });
         } else {
-            createMutation.mutate(form);
+            createMutation.mutate(data);
         }
     };
 
-    // Gerenciamento de Endereços Adicionais
     const openAddAddress = () => {
         setEditingAddress(null);
-        setAddressForm({ cep: '', rua: '', numero: '', bairro: '', complemento: '', principal: false });
+        _setAddrViaCep(null);
+        setAddressFormKey(k => k + 1);
         setAddressModalOpen(true);
     };
 
     const openEditAddress = (row: Endereco) => {
         setEditingAddress(row);
-        setAddressForm({
-            cep: row.cep,
-            rua: row.rua,
-            numero: row.numero,
-            bairro: row.bairro || '',
-            complemento: row.complemento || '',
-            principal: row.principal
-        });
+        _setAddrViaCep(null);
+        setAddressFormKey(k => k + 1);
         setAddressModalOpen(true);
     };
 
-    const handleSaveAddress = () => {
+    const handleAddressSubmit = (data: any) => {
         if (!editing?.id) return;
-
         if (editingAddress?.id) {
-            updateAddressMutation.mutate({
-                id: editingAddress.id,
-                data: {
-                    ...addressForm,
-                    clienteId: editing.id,
-                }
-            });
+            updateAddressMutation.mutate({ id: editingAddress.id, data: { ...data, clienteId: editing.id } });
         } else {
-            createAddressMutation.mutate({
-                ...addressForm,
-                clienteId: editing.id,
-            });
+            createAddressMutation.mutate({ ...data, clienteId: editing.id });
         }
     };
+
+    const isClientPending = createMutation.isPending || updateMutation.isPending;
+    const isAddrPending = createAddressMutation.isPending || updateAddressMutation.isPending;
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -246,39 +184,35 @@ export function ClientesPage() {
                         {editing?.id && (
                             <button
                                 className="btn btn-danger btn-sm"
-                                onClick={() => {
-                                    triggerConfirm(
-                                        'Remover Cliente',
-                                        'Tem certeza que deseja remover este cliente? Todos os endereços e vínculos serão afetados.',
-                                        () => deleteMutation.mutate({ id: editing.id as string })
-                                    );
-                                }}
+                                onClick={() => triggerConfirm(
+                                    'Remover Cliente',
+                                    'Tem certeza? Todos os endereços e vínculos serão afetados.',
+                                    () => deleteMutation.mutate({ id: editing.id as string })
+                                )}
                             >
                                 🗑 Remover
                             </button>
                         )}
-
                         <button className="btn btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-                        <button className="btn btn-primary" onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>
-                            {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : '💾 Salvar'}
+                        <button className="btn btn-primary" type="submit" form="client-form" disabled={isClientPending}>
+                            {isClientPending ? 'Salvando...' : '💾 Salvar'}
                         </button>
-
                     </>
                 }
             >
-
                 <ClientForm
-                    form={form}
-                    onChange={setForm}
+                    key={formKey}
+                    defaultValues={editing ? { nome: editing.nome || '', cpf: editing.cpf || '', contato: editing.contato || '' } : undefined}
                     editingId={editing?.id}
                     additionalAddresses={additionalAddresses}
                     isLoadingAddresses={isLoadingAddresses}
                     onAddAddress={openAddAddress}
                     onEditAddress={openEditAddress}
+                    onSubmit={handleClientSubmit}
                 />
             </Modal>
 
-            {/* Sub-modal para Adicionar/Editar Endereço Adicional */}
+            {/* Sub-modal Endereço */}
             <Modal
                 title={editingAddress ? 'Editar Endereço' : 'Novo Endereço'}
                 open={addressModalOpen}
@@ -289,35 +223,45 @@ export function ClientesPage() {
                         {editingAddress?.id && (
                             <button
                                 className="btn btn-danger btn-sm"
-                                onClick={() => {
-                                    triggerConfirm(
-                                        'Remover Endereço',
-                                        'Tem certeza que deseja remover este endereço?',
-                                        () => deleteAddressMutation.mutate({ id: editingAddress.id as string })
-                                    );
-                                }}
+                                onClick={() => triggerConfirm(
+                                    'Remover Endereço',
+                                    'Tem certeza que deseja remover este endereço?',
+                                    () => deleteAddressMutation.mutate({ id: editingAddress.id as string })
+                                )}
                             >
                                 🗑 Remover
                             </button>
                         )}
                         <button className="btn btn-ghost" onClick={() => setAddressModalOpen(false)}>Cancelar</button>
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleSaveAddress}
-                            disabled={createAddressMutation.isPending || updateAddressMutation.isPending}
-                        >
-                            {createAddressMutation.isPending || updateAddressMutation.isPending ? 'Salvando...' : '💾 Salvar'}
+                        <button className="btn btn-primary" type="submit" form="address-form" disabled={isAddrPending}>
+                            {isAddrPending ? 'Salvando...' : '💾 Salvar'}
                         </button>
                     </>
                 }
             >
                 <AddressForm
-                    form={addressForm}
-                    onChange={setAddressForm}
+                    key={addressFormKey}
+                    defaultValues={editingAddress ? {
+                        cep: _addrViaCep?.cep || editingAddress.cep || '',
+                        rua: _addrViaCep?.rua || editingAddress.rua || '',
+                        numero: editingAddress.numero || '',
+                        bairro: _addrViaCep?.bairro || editingAddress.bairro || '',
+                        complemento: editingAddress.complemento || '',
+                        principal: editingAddress.principal ?? false,
+                    } : _addrViaCep ? {
+                        cep: _addrViaCep.cep,
+                        rua: _addrViaCep.rua,
+                        numero: '',
+                        bairro: _addrViaCep.bairro,
+                        complemento: '',
+                        principal: false,
+                    } : undefined}
+                    onSubmit={handleAddressSubmit}
                     onCepChange={fetchAddrCep}
                     cepLoading={addrCepLoading}
                 />
             </Modal>
+
             <ConfirmationModal
                 isOpen={confirmModal.isOpen}
                 title={confirmModal.title}

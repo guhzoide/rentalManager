@@ -2,16 +2,9 @@ import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
+import { usuarioCreateSchema, usuarioUpdateSchema } from '../../lib/schemas';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-
-const usuarioInputSchema = z.object({
-    nome: z.string().min(3),
-    email: z.string().email("E-mail inválido"),
-    senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-    atendente: z.boolean().default(false),
-    whatsapp: z.string().optional().nullable(),
-});
 
 export const usuarioRouter = router({
     // ── Endpoint público: só retorna atendentes com WhatsApp cadastrado ──
@@ -60,7 +53,7 @@ export const usuarioRouter = router({
         }),
 
     create: protectedProcedure
-        .input(usuarioInputSchema)
+        .input(usuarioCreateSchema)
         .mutation(async ({ input }) => {
             const userId = crypto.randomUUID();
             const accountId = crypto.randomUUID();
@@ -107,7 +100,7 @@ export const usuarioRouter = router({
     update: protectedProcedure
         .input(z.object({
             id: z.string(),
-            data: usuarioInputSchema.partial(),
+            data: usuarioUpdateSchema,
         }))
         .mutation(async ({ input }) => {
             const { nome, email, senha, atendente, whatsapp } = input.data;

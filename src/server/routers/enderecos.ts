@@ -2,16 +2,8 @@ import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
+import { enderecoSchema } from '../../lib/schemas';
 
-const enderecoInputSchema = z.object({
-  clienteId: z.string(),
-  cep: z.string().min(8),
-  bairro: z.string().optional().nullable(),
-  rua: z.string().min(1),
-  numero: z.string().min(1),
-  complemento: z.string().optional().nullable(),
-  principal: z.boolean(),
-});
 
 import { type enderecos } from '@prisma/client';
 
@@ -32,7 +24,7 @@ export const enderecoRouter = router({
     }),
 
   create: protectedProcedure
-    .input(enderecoInputSchema)
+    .input(enderecoSchema)
     .mutation(async ({ input }) => {
       // If this new address is primary, toggle off all other addresses for this customer first
       if (input.principal) {
@@ -53,7 +45,7 @@ export const enderecoRouter = router({
   update: protectedProcedure
     .input(z.object({
       id: z.string(),
-      data: enderecoInputSchema.partial(),
+      data: enderecoSchema.partial(),
     }))
     .mutation(async ({ input }) => {
       // If this address is being updated to primary, toggle off all other addresses for this customer first

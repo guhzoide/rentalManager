@@ -2,17 +2,8 @@ import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
+import { estoqueSchema } from '../../lib/schemas';
 
-const estoqueInputSchema = z.object({
-  nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  peso: z.number().min(0),
-  largura: z.number().min(0),
-  altura: z.number().min(0),
-  valorDiaria: z.number().min(0),
-  quantidade: z.number().int().min(0),
-  disponivel: z.number().int().min(0),
-  ativo: z.boolean().default(true),
-});
 
 import { type estoques } from '@prisma/client';
 
@@ -30,7 +21,7 @@ export const estoqueRouter = router({
     }),
 
   create: protectedProcedure
-    .input(estoqueInputSchema)
+    .input(estoqueSchema)
     .mutation(async ({ input }) => {
       return prisma.estoques.create({
         data: {
@@ -43,7 +34,7 @@ export const estoqueRouter = router({
   update: protectedProcedure
     .input(z.object({
       id: z.string(),
-      data: estoqueInputSchema.partial(),
+      data: estoqueSchema.partial(),
     }))
     .mutation(async ({ input }) => {
       return prisma.estoques.update({
