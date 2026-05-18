@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { publicProcedure, router } from '../trpc';
+import { protectedProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
 
@@ -18,7 +18,7 @@ const clienteInputSchema = z.object({
 import { type clientes } from '@prisma/client';
 
 export const clienteRouter = router({
-  list: publicProcedure
+  list: protectedProcedure
     .input(paginationSchema)
     .query(async ({ input }) => {
       // Fetch paginated clients including their enderecos relation
@@ -53,7 +53,7 @@ export const clienteRouter = router({
       };
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(clienteInputSchema)
     .mutation(async ({ input }) => {
       const { cep, bairro, rua, numero, complemento, principal, ...clienteData } = input;
@@ -95,9 +95,9 @@ export const clienteRouter = router({
       return client;
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(z.object({
-      id: z.number(),
+      id: z.string(),
       data: clienteInputSchema.partial(),
     }))
     .mutation(async ({ input }) => {
@@ -166,8 +166,8 @@ export const clienteRouter = router({
       return client;
     }),
 
-  delete: publicProcedure
-    .input(z.object({ id: z.number() }))
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       return prisma.clientes.delete({
         where: { id: input.id },

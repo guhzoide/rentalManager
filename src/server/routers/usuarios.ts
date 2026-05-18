@@ -1,81 +1,158 @@
 import { z } from 'zod';
-import { publicProcedure, router } from '../trpc';
+import { protectedProcedure, publicProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const usuarioInputSchema = z.object({
-  nome: z.string().min(3),
-  loginName: z.string().min(3),
-  email: z.string().email("E-mail inválido"),
-  senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+    nome: z.string().min(3),
+    email: z.string().email("E-mail inválido"),
+    senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+    atendente: z.boolean().default(false),
+    whatsapp: z.string().optional().nullable(),
 });
 
-import { type usuarios } from '@prisma/client';
-
 export const usuarioRouter = router({
-  list: publicProcedure
-    .input(paginationSchema)
-    .query(async ({ input }) => {
-      return getPaginatedResult<usuarios>(prisma.usuarios, input, {
-        select: {
-          id: true,
-          nome: true,
-          loginName: true,
-          email: true,
-          createdAt: true,
-          updatedAt: true,
-          // Senha omitida propositalmente
-        }
-      });
-    }),
+    // ── Endpoint público: só retorna atendentes com WhatsApp cadastrado ──
+    listAtendentes: publicProcedure
+        .query(async () => {
+            const atendentes = await prisma.user.findMany({
+                where: { atendente: true, whatsapp: { not: null } },
+                select: { id: true, name: true, whatsapp: true },
+            });
+            return atendentes.map((a) => ({
+                id: a.id,
+                nome: a.name,
+                whatsapp: a.whatsapp,
+            }));
+        }),
 
-  create: publicProcedure
-    .input(usuarioInputSchema)
-    .mutation(async ({ input }) => {
-      const hashedPassword = await bcrypt.hash(input.senha, 10);
-      return prisma.usuarios.create({
-        data: {
-          ...input,
-          senha: hashedPassword,
-          updatedAt: new Date(),
-        },
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-        }
-      });
-    }),
+    list: protectedProcedure
+        .input(paginationSchema)
+        .query(async ({ input }) => {
+            const result = await getPaginatedResult<any>(prisma.user as any, input, {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    atendente: true,
+                    whatsapp: true,
+                    createdAt: true,
+                    updatedAt: true,
+                }
+            });
 
-  update: publicProcedure
-    .input(z.object({
-      id: z.number(),
-      data: usuarioInputSchema.partial(),
-    }))
-    .mutation(async ({ input }) => {
-      const updateData = { ...input.data, updatedAt: new Date() };
-      
-      if (updateData.senha) {
-        updateData.senha = await bcrypt.hash(updateData.senha, 10);
-      }
+            const mappedData = result.data.map((u: any) => ({
+                id: u.id,
+                nome: u.name,
+                email: u.email,
+                atendente: u.atendente,
+                whatsapp: u.whatsapp,
+                createdAt: u.createdAt,
+                updatedAt: u.updatedAt,
+            }));
 
-      return prisma.usuarios.update({
-        where: { id: input.id },
-        data: updateData,
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-        }
-      });
-    }),
+            return {
+                ...result,
+                data: mappedData,
+            };
+        }),
 
-  delete: publicProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
-      return prisma.usuarios.delete({
-        where: { id: input.id },
-      });
-    }),
+    create: protectedProcedure
+        .input(usuarioInputSchema)
+        .mutation(async ({ input }) => {
+            const userId = crypto.randomUUID();
+            const accountId = crypto.randomUUID();
+            const hashedPassword = await bcrypt.hash(input.senha, 10);
+
+            const existing = await prisma.user.findUnique({
+                where: { email: input.email }
+            });
+            if (existing) {
+                throw new Error("E-mail já cadastrado");
+            }
+
+            return await prisma.$transaction(async (tx) => {
+                const user = await tx.user.create({
+                    data: {
+                        id: userId,
+                        name: input.nome,
+                        email: input.email,
+                        atendente: input.atendente,
+                        whatsapp: input.whatsapp,
+                    }
+                });
+
+                await tx.account.create({
+                    data: {
+                        id: accountId,
+                        userId: userId,
+                        accountId: input.email,
+                        providerId: "credential",
+                        password: hashedPassword,
+                    }
+                });
+
+                return {
+                    id: user.id,
+                    nome: user.name,
+                    email: user.email,
+                    atendente: user.atendente,
+                    whatsapp: user.whatsapp,
+                };
+            });
+        }),
+
+    update: protectedProcedure
+        .input(z.object({
+            id: z.string(),
+            data: usuarioInputSchema.partial(),
+        }))
+        .mutation(async ({ input }) => {
+            const { nome, email, senha, atendente, whatsapp } = input.data;
+
+            return await prisma.$transaction(async (tx) => {
+                const user = await tx.user.update({
+                    where: { id: input.id },
+                    data: {
+                        name: nome,
+                        email: email,
+                        atendente: atendente,
+                        whatsapp: whatsapp,
+                    }
+                });
+
+                if (email) {
+                    await tx.account.updateMany({
+                        where: { userId: input.id, providerId: "credential" },
+                        data: { accountId: email }
+                    });
+                }
+
+                if (senha) {
+                    const hashedPassword = await bcrypt.hash(senha, 10);
+                    await tx.account.updateMany({
+                        where: { userId: input.id, providerId: "credential" },
+                        data: { password: hashedPassword }
+                    });
+                }
+
+                return {
+                    id: user.id,
+                    nome: user.name,
+                    email: user.email,
+                    atendente: user.atendente,
+                    whatsapp: user.whatsapp,
+                };
+            });
+        }),
+
+    delete: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .mutation(async ({ input }) => {
+            return prisma.user.delete({
+                where: { id: input.id },
+            });
+        }),
 });

@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { trpcServer } from '@hono/trpc-server';
 import { appRouter } from './routers/_app';
 import { createContext } from './trpc';
+import { auth } from './auth';
 
 const app = new Hono();
 
@@ -10,12 +11,17 @@ app.use(
   '*',
   cors({
     origin: ['http://localhost:5173', 'http://localhost:3000'],
-    allowMethods: ['GET', 'POST', 'OPTIONS'],
-    allowHeaders: ['Content-Type'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   })
 );
 
 app.get('/', (c) => c.json({ status: 'ok', app: 'Rental System API' }));
+
+app.on(['POST', 'GET'], '/api/auth/*', (c) => {
+  return auth.handler(c.req.raw);
+});
 
 app.use(
   '/trpc/*',

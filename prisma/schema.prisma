@@ -1,73 +1,161 @@
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+}
+
+model empresas {
+  id        String    @id @default(uuid())
+  nome      String
+  logoUrl   String?
+  cnpj      String?
+  telefone  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model agendas {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  data       DateTime
-  itemId     String    @db.ObjectId
-  clienteId  String    @db.ObjectId
-  enderecoId String    @db.ObjectId
-  observacao String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  clientes   clientes  @relation(fields: [clienteId], references: [id])
-  enderecos  enderecos @relation(fields: [enderecoId], references: [id])
-  estoques   estoques  @relation(fields: [itemId], references: [id])
+  id          String         @id @default(uuid())
+  data        DateTime
+  clienteId   String
+  enderecoId  String
+  observacao  String?
+  dataColeta  DateTime       @default(now())
+  desconto    Float          @default(0)
+  valorTotal  Float          @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  clientes    clientes       @relation(fields: [clienteId], references: [id])
+  enderecos   enderecos      @relation(fields: [enderecoId], references: [id])
+  itens       agenda_itens[]
+}
+
+model agenda_itens {
+  id         String   @id @default(uuid())
+  agendaId   String
+  itemId     String
+  quantidade Int      @default(1)
+  agendas    agendas  @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  estoques   estoques @relation(fields: [itemId], references: [id])
 }
 
 model clientes {
-  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  id        String      @id @default(uuid())
   nome      String
-  cpf       String?
   contato   String
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  cpf       String?
   agendas   agendas[]
   enderecos enderecos[]
 }
 
 model enderecos {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  clienteId   String    @db.ObjectId
+  id          String    @id @default(uuid())
+  clienteId   String
   cep         String
-  bairro      String?
   rua         String
   numero      String
   complemento String?
-  principal   Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  bairro      String?
+  principal   Boolean   @default(false)
   agendas     agendas[]
   clientes    clientes  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
 
 model estoques {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  id          String    @id @default(uuid())
   nome        String
   peso        Float
   largura     Float
   altura      Float
   valorDiaria Float
+  imageUrl    String?
   ativo       Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  quantidade  Int       @default(0)
-  disponivel  Int       @default(0)
-  agendas     agendas[]
+  quantidade  Int            @default(0)
+  disponivel  Int            @default(0)
+  itens       agenda_itens[]
 }
 
-model usuarios {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  nome      String
-  loginName String   @unique
-  email     String   @unique
-  senha     String
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  atendente     Boolean   @default(false)
+  whatsapp      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model transacoes {
+  id        String   @id @default(uuid())
+  descricao String
+  valor     Float
+  tipo      String
+  data      DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

@@ -7,7 +7,10 @@ import { ClientesPage } from '@/pages/ClientesPage';
 import { EstoquePage } from '@/pages/EstoquePage';
 import { UsuariosPage } from '@/pages/UsuariosPage';
 import { AgendaPage } from '@/pages/AgendaPage';
+import { FinancePage } from '@/pages/FinancePage';
 import { CatalogPage } from '@/pages/CatalogPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { useSession, signOut } from '@/lib/auth-client';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useMemo } from 'react';
 import { ToastContainer } from 'react-toastify';
@@ -26,6 +29,7 @@ const ALL_TABS: Record<string, Tab> = {
     clientes: { id: 'clientes', label: 'Clientes', icon: '👥' },
     estoque: { id: 'estoque', label: 'Estoque', icon: '📦' },
     usuarios: { id: 'usuarios', label: 'Usuários', icon: '👤' },
+    financeiro: { id: 'financeiro', label: 'Financeiro', icon: '💵' },
 };
 
 const SIDEBAR_ITEMS = [
@@ -34,6 +38,7 @@ const SIDEBAR_ITEMS = [
     { id: 'clientes', label: 'Clientes', icon: '👥' },
     { id: 'estoque', label: 'Estoque', icon: '📦' },
     { id: 'usuarios', label: 'Usuários', icon: '👤' },
+    { id: 'financeiro', label: 'Financeiro', icon: '💵' },
 ];
 
 function renderPage(id: string) {
@@ -42,6 +47,7 @@ function renderPage(id: string) {
         case 'estoque': return <EstoquePage />;
         case 'usuarios': return <UsuariosPage />;
         case 'agenda': return <AgendaPage />;
+        case 'financeiro': return <FinancePage />;
         default: return null;
     }
 }
@@ -53,6 +59,7 @@ const queryClient = new QueryClient({
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDarkMode: (v: boolean) => void }) {
+    const { data: session, isPending: sessionLoading } = useSession();
     const [openTabs, setOpenTabs] = useState<Tab[]>([]);
     const [activeTab, setActiveTab] = useState<string | null>(null); // null = menu
     const [isCatalog, setIsCatalog] = useState(false);
@@ -78,6 +85,41 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
 
     if (isCatalog) {
         return <CatalogPage />;
+    }
+
+    if (sessionLoading) {
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-secondary)'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '3px solid var(--border)',
+                        borderTopColor: 'var(--accent)',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        margin: '0 auto 12px auto'
+                    }} />
+                    <style>{`
+                        @keyframes spin {
+                            to { transform: rotate(360deg); }
+                        }
+                    `}</style>
+                    <p style={{ fontSize: '13px' }}>Carregando sessão...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!session) {
+        return <LoginPage onLoginSuccess={() => { }} />;
     }
 
     const navigate = (id: string) => {
@@ -143,7 +185,16 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                                 setIsCatalog(true);
                             }}
                         >
-                            🌐 Ver Catálogo
+                            🌐 Ver catálogo
+                        </button>
+                        <button
+                            className="btn btn-danger btn-sm"
+                            style={{ width: '100%', justifyContent: 'center' }}
+                            onClick={async () => {
+                                await signOut();
+                            }}
+                        >
+                            🚪 Sair
                         </button>
                     </div>
                 </nav>

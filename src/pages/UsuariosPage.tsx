@@ -2,20 +2,27 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
 import { Modal } from '@/components/ui/Modal';
+import { UsuarioForm } from '@/components/forms/UsuarioForm';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface Usuario {
-    id: number;
+    id: string;
     nome: string;
-    loginName: string;
     email: string;
+    atendente: boolean;
+    whatsapp?: string | null;
 }
 
-const EMPTY = { nome: '', loginName: '', email: '', senha: '' };
+const EMPTY = { nome: '', email: '', senha: '', atendente: false, whatsapp: '' };
 
 const columns: Column<Usuario>[] = [
     { key: 'nome', label: 'Nome' },
-    { key: 'loginName', label: 'Login', width: '160px' },
     { key: 'email', label: 'E-mail' },
+    {
+        key: 'atendente',
+        label: 'Atendente',
+        render: (v: any) => v ? <span className="badge badge-accent">Sim</span> : <span style={{ color: 'var(--text-muted)' }}>Não</span>
+    },
 ];
 
 export function UsuariosPage() {
@@ -23,8 +30,33 @@ export function UsuariosPage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Partial<Usuario> | null>(null);
     const [form, setForm] = useState(EMPTY);
+
+    // Confirmation Modal State
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {},
+    });
+
+    const triggerConfirm = (title: string, message: string, onConfirm: () => void) => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            onConfirm: () => {
+                onConfirm();
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
     const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-    const [showPassword, setShowPassword] = useState(false);
+
 
     const utils = trpc.useUtils();
 
@@ -63,15 +95,13 @@ export function UsuariosPage() {
         setEditing(null);
         setForm(EMPTY);
         setStatus(null);
-        setShowPassword(false);
         setModalOpen(true);
     };
 
     const openEdit = (row: Usuario) => {
         setEditing(row);
-        setForm({ nome: row.nome, loginName: row.loginName, email: row.email, senha: '' });
+        setForm({ nome: row.nome, email: row.email, senha: '', atendente: row.atendente, whatsapp: row.whatsapp || '' });
         setStatus(null);
-        setShowPassword(false);
         setModalOpen(true);
     };
 
@@ -79,8 +109,9 @@ export function UsuariosPage() {
         if (editing?.id) {
             const updateData: any = {
                 nome: form.nome,
-                loginName: form.loginName,
-                email: form.email
+                email: form.email,
+                atendente: (form as any).atendente,
+                whatsapp: (form as any).whatsapp || null,
             };
             if (form.senha) updateData.senha = form.senha;
 
@@ -89,7 +120,7 @@ export function UsuariosPage() {
                 data: updateData
             });
         } else {
-            createMutation.mutate(form);
+            createMutation.mutate(form as any);
         }
     };
 
@@ -118,10 +149,14 @@ export function UsuariosPage() {
                             <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => {
-                                    if (confirm('Remover este usuário?')) {
-                                        deleteMutation.mutate({ id: editing.id as number });
-                                        setModalOpen(false);
-                                    }
+                                    triggerConfirm(
+                                        'Remover Usuário',
+                                        'Tem certeza que deseja remover este usuário? Esta ação não pode ser desfeita.',
+                                        () => {
+                                            deleteMutation.mutate({ id: editing.id as string });
+                                            setModalOpen(false);
+                                        }
+                                    );
                                 }}
                             >
                                 🗑 Remover
@@ -142,68 +177,15 @@ export function UsuariosPage() {
                     </div>
                 )}
 
-                <div className="form-grid">
-                    <div className="form-group full">
-                        <label className="form-label">Nome *</label>
-                        <input
-                            className="form-control"
-                            value={form.nome}
-                            onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                            placeholder="Nome completo"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Login *</label>
-                        <input
-                            className="form-control"
-                            value={form.loginName}
-                            onChange={(e) => setForm({ ...form, loginName: e.target.value })}
-                            placeholder="nome.sobrenome"
-                            autoComplete="off"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">E-mail *</label>
-                        <input
-                            className="form-control"
-                            type="email"
-                            value={form.email}
-                            onChange={(e) => setForm({ ...form, email: e.target.value })}
-                            placeholder="email@exemplo.com"
-                        />
-                    </div>
-
-                    <div className="form-group full">
-                        <label className="form-label">
-                            Senha {editing ? '(deixe em branco para manter)' : '*'}
-                        </label>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                className="form-control"
-                                type={showPassword ? 'text' : 'password'}
-                                value={form.senha}
-                                onChange={(e) => setForm({ ...form, senha: e.target.value })}
-                                placeholder="••••••••"
-                                autoComplete="new-password"
-                                style={{ paddingRight: 40 }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                style={{
-                                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    color: 'var(--text-muted)', fontSize: 16,
-                                }}
-                            >
-                                {showPassword ? '🙈' : '👁'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <UsuarioForm form={form} onChange={setForm} isEditing={!!editing?.id} />
             </Modal>
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }

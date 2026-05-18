@@ -1,15 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from 'react-toastify';
-import Switch from '@mui/material/Switch';
-import TextField from '@mui/material/TextField';
-import InputAdornment from '@mui/material/InputAdornment';
-import FormControlLabel from '@mui/material/FormControlLabel';
+import { EstoqueForm } from '@/components/forms/EstoqueForm';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface EstoqueItem {
-    id: number;
+    id: string;
     nome: string;
     peso: number;
     largura: number;
@@ -68,6 +66,31 @@ export function EstoquePage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Partial<EstoqueItem> | null>(null);
     const [form, setForm] = useState<Omit<EstoqueItem, 'id'>>(EMPTY);
+
+    // Confirmation Modal State
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {},
+    });
+
+    const triggerConfirm = (title: string, message: string, onConfirm: () => void) => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            onConfirm: () => {
+                onConfirm();
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
 
     const utils = trpc.useUtils();
 
@@ -128,25 +151,7 @@ export function EstoquePage() {
         }
     };
 
-    const numField = (key: keyof Omit<EstoqueItem, 'id' | 'nome' | 'ativo'>, label: string, suffix: string, step = "0.01") => (
-        <TextField
-            label={label}
-            type="number"
-            variant="outlined"
-            fullWidth
-            slotProps={{
-                input: {
-                    endAdornment: <InputAdornment position="end">{suffix}</InputAdornment>,
-                },
-                htmlInput: {
-                    step: step,
-                    min: 0,
-                }
-            }}
-            value={form[key]}
-            onChange={(e) => setForm({ ...form, [key]: (step === "1" ? parseInt(e.target.value) : parseFloat(e.target.value)) || 0 })}
-        />
-    );
+
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -174,9 +179,11 @@ export function EstoquePage() {
                             <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => {
-                                    if (confirm('Remover este item?')) {
-                                        deleteMutation.mutate({ id: editing.id as number });
-                                    }
+                                    triggerConfirm(
+                                        'Remover Item',
+                                        'Tem certeza que deseja remover este item do estoque? Esta ação não pode ser desfeita e afetará o histórico.',
+                                        () => deleteMutation.mutate({ id: editing.id as string })
+                                    );
                                 }}
                             >
                                 🗑 Remover
@@ -192,63 +199,15 @@ export function EstoquePage() {
                 }
             >
 
-                <div className="form-grid">
-                    <div className="form-group full">
-                        <TextField
-                            label="Nome do item"
-                            variant="outlined"
-                            fullWidth
-                            value={form.nome}
-                            onChange={(e: any) => setForm({ ...form, nome: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="form-group full">
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={form.ativo}
-                                    onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
-                                />
-                            }
-                            label="Ativo"
-                        />
-                    </div>
-
-                    {numField('peso', 'Peso (kg)', 'kg')}
-                    {numField('largura', 'Largura (m)', 'm')}
-                    {numField('altura', 'Altura (m)', 'm')}
-                    {numField('quantidade', 'Quantidade em estoque *', 'un', '1')}
-                    <div className="form-group">
-                        <TextField
-                            type="number"
-                            label="Quantidade disponível"
-                            fullWidth
-                            value={form.disponivel}
-                            onChange={(e) => setForm({ ...form, disponivel: parseInt(e.target.value) || 0 })}
-                        />
-                    </div>
-                    <div className="form-group full">
-                        <TextField
-                            label="Valor da diária"
-                            type="number"
-                            variant="outlined"
-                            fullWidth
-                            slotProps={{
-                                input: {
-                                    startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                                },
-                                htmlInput: {
-                                    step: "0.01",
-                                    min: 0,
-                                }
-                            }}
-                            value={form.valorDiaria}
-                            onChange={(e) => setForm({ ...form, valorDiaria: parseFloat(e.target.value) || 0 })}
-                        />
-                    </div>
-                </div>
+                <EstoqueForm form={form} onChange={setForm} />
             </Modal>
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }
