@@ -1,12 +1,9 @@
+import { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import TextField from '@mui/material/TextField';
+import { clienteSchema, type ClienteInput } from '@/lib/schemas';
 import { DataGrid, Column } from '../ui/DataGrid';
-
-interface Cliente {
-    id: string;
-    nome: string;
-    cpf?: string | null;
-    contato: string;
-}
 
 interface Endereco {
     id: string;
@@ -17,16 +14,6 @@ interface Endereco {
     bairro?: string | null;
     complemento?: string | null;
     principal: boolean;
-}
-
-interface ClientFormProps {
-    form: Omit<Cliente, 'id'>;
-    onChange: (form: Omit<Cliente, 'id'>) => void;
-    editingId?: string;
-    additionalAddresses: Endereco[];
-    isLoadingAddresses: boolean;
-    onAddAddress: () => void;
-    onEditAddress: (address: Endereco) => void;
 }
 
 const addressColumns: Column<Endereco>[] = [
@@ -41,61 +28,114 @@ const addressColumns: Column<Endereco>[] = [
     },
 ];
 
+interface ClientFormProps {
+    defaultValues?: Partial<ClienteInput>;
+    editingId?: string;
+    additionalAddresses: Endereco[];
+    isLoadingAddresses: boolean;
+    onAddAddress: () => void;
+    onEditAddress: (address: Endereco) => void;
+    onSubmit: (data: ClienteInput) => void;
+}
+
 export function ClientForm({
-    form,
-    onChange,
+    defaultValues,
     editingId,
     additionalAddresses,
     isLoadingAddresses,
     onAddAddress,
     onEditAddress,
+    onSubmit,
 }: ClientFormProps) {
+    const {
+        control,
+        handleSubmit,
+        reset,
+        formState: { errors },
+    } = useForm<ClienteInput>({
+        resolver: zodResolver(clienteSchema),
+        defaultValues: {
+            nome: '',
+            cpf: '',
+            contato: '',
+            ...defaultValues,
+        },
+    });
+
+    useEffect(() => {
+        reset({ nome: '', cpf: '', contato: '', ...defaultValues });
+    }, [JSON.stringify(defaultValues)]);
+
     return (
         <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
             <div style={{ flex: 1 }}>
-                <div className="form-grid">
-                    <div className="form-group">
-                        <TextField
-                            label="Nome"
-                            variant="outlined"
-                            fullWidth
-                            value={form.nome}
-                            onChange={(e) => onChange({ ...form, nome: e.target.value })}
-                            placeholder="Nome completo"
-                        />
-                    </div>
+                {/* 
+                  CORREÇÃO: O <form> agora envolve APENAS os campos de input,
+                  isolando o DataGrid e seus botões internos.
+                */}
+                <form id="client-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+                    <div className="form-grid">
+                        <div className="form-group">
+                            <Controller
+                                name="nome"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        label="Nome *"
+                                        variant="outlined"
+                                        fullWidth
+                                        placeholder="Nome completo"
+                                        error={!!errors.nome}
+                                        helperText={errors.nome?.message}
+                                    />
+                                )}
+                            />
+                        </div>
 
-                    <div className="form-group">
-                        <TextField
-                            label="CPF"
-                            variant="outlined"
-                            fullWidth
-                            value={form.cpf || ''}
-                            onChange={(e) => onChange({ ...form, cpf: e.target.value || null })}
-                            placeholder="000.000.000-00"
-                        />
-                    </div>
+                        <div className="form-group">
+                            <Controller
+                                name="cpf"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        value={field.value ?? ''}
+                                        label="CPF"
+                                        variant="outlined"
+                                        fullWidth
+                                        placeholder="000.000.000-00"
+                                        error={!!errors.cpf}
+                                        helperText={errors.cpf?.message}
+                                    />
+                                )}
+                            />
+                        </div>
 
-                    <div className="form-group full">
-                        <TextField
-                            label="Contato"
-                            variant="outlined"
-                            fullWidth
-                            value={form.contato}
-                            onChange={(e) => onChange({ ...form, contato: e.target.value })}
-                            placeholder="(00) 00000-0000"
-                        />
+                        <div className="form-group full">
+                            <Controller
+                                name="contato"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        label="Contato *"
+                                        variant="outlined"
+                                        fullWidth
+                                        placeholder="(00) 00000-0000"
+                                        error={!!errors.contato}
+                                        helperText={errors.contato?.message}
+                                    />
+                                )}
+                            />
+                        </div>
                     </div>
-                </div>
+                </form>
             </div>
 
+            {/* O DataGrid agora fica FORA da tag form */}
             {editingId && (
-                <div style={{
-                    flex: 1.2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minWidth: 0,
-                }}>
+                <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                     <h3 style={{
                         margin: '0 0 12px 0',
                         fontSize: '14.5px',

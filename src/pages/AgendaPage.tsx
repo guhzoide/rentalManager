@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
 import { AgendaForm } from '@/components/forms/AgendaForm';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { agendaSchema } from '@/lib/schemas';
 
 dayjs.locale('pt-br');
 
@@ -80,6 +81,7 @@ export function AgendaPage() {
     const [desconto, setDesconto] = useState(0);
 
     const [formMode, setFormMode] = useState<'view' | 'list' | 'new' | 'edit'>('view');
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     // Confirmation Modal State
     const [confirmModal, setConfirmModal] = useState<{
@@ -259,33 +261,51 @@ export function AgendaPage() {
     };
 
     const handleSave = () => {
-        if (selectedItens.length === 0 || selectedItens.some(i => !i.itemId) || !clienteId || !enderecoId || !dataStr || !dataColetaStr) {
-            toast.error('Preencha todos os campos obrigatórios e adicione pelo menos um item.', { theme: 'colored' });
+        // Validação via Zod
+        const parseResult = agendaSchema.safeParse({
+            data: dataStr ? new Date(dataStr) : undefined,
+            dataColeta: dataColetaStr ? new Date(dataColetaStr) : undefined,
+            clienteId,
+            enderecoId,
+            observacao,
+            itens: selectedItens,
+            desconto,
+            valorTotal: valorTotalCalculado,
+        });
+
+        if (!parseResult.success) {
+            const fieldErrors: Record<string, string> = {};
+            for (const issue of parseResult.error.issues) {
+                const path = issue.path.join('_') || 'geral';
+                fieldErrors[path] = issue.message;
+            }
+            setFormErrors(fieldErrors);
+            toast.error('Corrija os campos destacados antes de salvar.', { theme: 'colored' });
             return;
         }
 
         // Validar se data de coleta é posterior à data de entrega
         if (dayjs(dataColetaStr).isBefore(dayjs(dataStr))) {
+            setFormErrors({ dataColeta: 'A data de coleta deve ser posterior à data de entrega.' });
             toast.error('A data/hora da coleta deve ser posterior à data/hora de entrega.', { theme: 'colored' });
             return;
         }
 
+        setFormErrors({});
+
         const payload: any = {
             data: new Date(dataStr).toISOString(),
             dataColeta: new Date(dataColetaStr).toISOString(),
-            clienteId: clienteId,
-            enderecoId: enderecoId,
+            clienteId,
+            enderecoId,
             observacao,
             itens: selectedItens,
-            desconto: desconto,
+            desconto,
             valorTotal: valorTotalCalculado,
         };
 
         if (selectedAgenda?.id) {
-            updateMutation.mutate({
-                id: selectedAgenda.id,
-                data: payload,
-            });
+            updateMutation.mutate({ id: selectedAgenda.id, data: payload });
         } else {
             saveMutation.mutate(payload);
         }
@@ -407,6 +427,7 @@ export function AgendaPage() {
                             itens={itens}
                             clientes={clientes}
                             filteredEnderecos={filteredEnderecos}
+                            errors={formErrors}
                         />
 
                         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>

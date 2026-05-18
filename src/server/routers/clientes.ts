@@ -2,18 +2,8 @@ import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
+import { clienteSchema } from '../../lib/schemas';
 
-const clienteInputSchema = z.object({
-  nome: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
-  cpf: z.string().optional().nullable(),
-  cep: z.string().optional().nullable(),
-  bairro: z.string().optional().nullable(),
-  rua: z.string().optional().nullable(),
-  numero: z.string().optional().nullable(),
-  complemento: z.string().optional().nullable(),
-  principal: z.boolean().optional().default(true),
-  contato: z.string().min(1, "Contato é obrigatório"),
-});
 
 import { type clientes } from '@prisma/client';
 
@@ -54,7 +44,7 @@ export const clienteRouter = router({
     }),
 
   create: protectedProcedure
-    .input(clienteInputSchema)
+    .input(clienteSchema)
     .mutation(async ({ input }) => {
       const { cep, bairro, rua, numero, complemento, principal, ...clienteData } = input;
 
@@ -98,7 +88,7 @@ export const clienteRouter = router({
   update: protectedProcedure
     .input(z.object({
       id: z.string(),
-      data: clienteInputSchema.partial(),
+      data: clienteSchema.partial(),
     }))
     .mutation(async ({ input }) => {
       const { cep, bairro, rua, numero, complemento, principal, ...clienteData } = input.data;
