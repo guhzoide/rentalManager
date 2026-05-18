@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { publicProcedure, router } from '../trpc';
+import { protectedProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
 
 const enderecoInputSchema = z.object({
-  clienteId: z.number().int(),
+  clienteId: z.string(),
   cep: z.string().min(8),
   bairro: z.string().optional().nullable(),
   rua: z.string().min(1),
@@ -16,14 +16,14 @@ const enderecoInputSchema = z.object({
 import { type enderecos } from '@prisma/client';
 
 export const enderecoRouter = router({
-  list: publicProcedure
+  list: protectedProcedure
     .input(paginationSchema)
     .query(async ({ input }) => {
       return getPaginatedResult<enderecos>(prisma.enderecos, input);
     }),
 
-  byClienteId: publicProcedure
-    .input(z.object({ clienteId: z.number().int() }))
+  byClienteId: protectedProcedure
+    .input(z.object({ clienteId: z.string() }))
     .query(async ({ input }) => {
       return prisma.enderecos.findMany({
         where: { clienteId: input.clienteId },
@@ -31,7 +31,7 @@ export const enderecoRouter = router({
       });
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(enderecoInputSchema)
     .mutation(async ({ input }) => {
       // If this new address is primary, toggle off all other addresses for this customer first
@@ -50,9 +50,9 @@ export const enderecoRouter = router({
       });
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(z.object({
-      id: z.number(),
+      id: z.string(),
       data: enderecoInputSchema.partial(),
     }))
     .mutation(async ({ input }) => {
@@ -79,8 +79,8 @@ export const enderecoRouter = router({
       });
     }),
 
-  delete: publicProcedure
-    .input(z.object({ id: z.number() }))
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       return prisma.enderecos.delete({
         where: { id: input.id },

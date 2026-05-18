@@ -1,3 +1,5 @@
+import { useSession } from '@/lib/auth-client';
+
 interface MenuPageProps {
     onNavigate: (module: string) => void;
 }
@@ -31,14 +33,23 @@ const modules = [
         desc: 'Manutenção de usuários do sistema',
         color: 'rgba(239, 68, 68, 0.2)',
     },
+    {
+        id: 'financeiro',
+        icon: '💰',
+        title: 'Financeiro',
+        desc: 'Gerencie o fluxo de caixa e transações',
+        color: 'rgba(16, 185, 129, 0.2)',
+    },
 ];
 
 export function MenuPage({ onNavigate }: MenuPageProps) {
+    const { data: session } = useSession();
+
     return (
         <div className="menu-page">
             <div className="menu-welcome">
-                <h1>Sistema de Locação</h1>
-                <p>Selecione um módulo para começar</p>
+                <h1>Sistema de locação</h1>
+                <p>Bem-vindo(a), {session?.user?.name}!</p>
             </div>
 
             <div className="menu-grid">

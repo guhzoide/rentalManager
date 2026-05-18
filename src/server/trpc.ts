@@ -1,8 +1,9 @@
+import 'dotenv/config';
 import { initTRPC, TRPCError } from '@trpc/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db';
+import { auth } from './auth';
 
-// ─── Prisma ───────────────────────────────────────────────────────────────────
-export const prisma = new PrismaClient();
+export { prisma };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 export const createContext = async (opts?: any) => {
@@ -21,11 +22,21 @@ export const createContext = async (opts?: any) => {
   const url = opts?.req?.url ? new URL(opts.req.url) : null;
   const table = url?.searchParams.get('table') || undefined;
 
+  let session = null;
+  try {
+    session = await auth.api.getSession({
+      headers: opts?.req?.headers || new Headers(),
+    });
+  } catch (err) {
+    console.error('Erro ao ler sessão no tRPC context:', err);
+  }
+
   return {
     prisma,
     req: opts?.req,
     rawBody,
     table,
+    session,
   };
 };
 
@@ -43,7 +54,21 @@ const loggerMiddleware = t.middleware(async (opts) => {
   return result;
 });
 
+const isAuthed = t.middleware(({ next, ctx }) => {
+  if (!ctx.session) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Você precisa estar logado para acessar este recurso.',
+    });
+  }
+  return next({
+    ctx: {
+      session: ctx.session,
+    },
+  });
+});
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 export const router = t.router;
 export const publicProcedure = t.procedure.use(loggerMiddleware);
-export const protectedProcedure = t.procedure.use(loggerMiddleware); // Simplificado sem auth por enquanto
+export const protectedProcedure = t.procedure.use(loggerMiddleware).use(isAuthed);

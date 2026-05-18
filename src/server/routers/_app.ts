@@ -4,6 +4,7 @@ import { estoqueRouter } from './estoque';
 import { usuarioRouter } from './usuarios';
 import { agendaRouter } from './agendas';
 import { enderecoRouter } from './enderecos';
+import { transacaoRouter } from './transacoes';
 
 export const appRouter = router({
   clientes: clienteRouter,
@@ -11,6 +12,7 @@ export const appRouter = router({
   usuarios: usuarioRouter,
   agendas: agendaRouter,
   enderecos: enderecoRouter,
+  transacoes: transacaoRouter,
 });
 
 

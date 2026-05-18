@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -n \"vite,server\" -c \"blue,green\" \"vite\" \"bun run dev:server\"",
-    "dev:server": "bun run src/server/index.ts",
+    "dev:server": "bun --watch src/server/index.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "^1.6.11",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@hono/trpc-server": "^0.4.2",
@@ -24,6 +25,7 @@
     "@trpc/server": "^11.17.0",
     "@types/bcryptjs": "^3.0.0",
     "bcryptjs": "^3.0.3",
+    "better-auth": "^1.6.11",
     "dayjs": "^1.11.20",
     "dotenv": "^17.4.2",
     "hono": "^4.12.18",
