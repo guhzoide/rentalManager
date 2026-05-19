@@ -17,7 +17,7 @@ const usuarioEditSchema = usuarioCreateSchema.extend({
     senha: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres').or(z.literal('')).optional(),
 });
 
-type UsuarioFormValues = UsuarioCreateInput & { senha?: string };
+export type UsuarioFormValues = Omit<UsuarioCreateInput, 'senha'> & { senha?: string };
 
 export interface UsuarioFormRef {
     submit: () => Promise<UsuarioFormValues | null>;

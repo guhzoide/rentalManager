@@ -6,7 +6,7 @@ export const usuarioCreateSchema = z.object({
     nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
     email: z.string().email('E-mail inválido'),
     senha: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-    atendente: z.boolean().default(false),
+    atendente: z.boolean(),
     whatsapp: z.string().optional().nullable(),
 });
 
@@ -61,7 +61,7 @@ export const estoqueSchema = z.object({
     valorDiaria: z.number({ error: 'Informe um número válido' }).min(0, 'Valor não pode ser negativo'),
     quantidade: z.number({ error: 'Informe um número válido' }).int('Deve ser inteiro').min(0, 'Quantidade não pode ser negativa'),
     disponivel: z.number({ error: 'Informe um número válido' }).int('Deve ser inteiro').min(0, 'Quantidade não pode ser negativa'),
-    ativo: z.boolean().default(true),
+    ativo: z.boolean(),
 });
 
 export type EstoqueInput = z.infer<typeof estoqueSchema>;
