@@ -1,6 +1,6 @@
 import { prisma } from '../trpc';
 import { TRPCError } from '@trpc/server';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from 'better-auth/crypto';
 import { getValidator } from '../validation';
 
 const TABLES_WITH_PASSWORD = ['usuarios'];
@@ -66,7 +66,7 @@ export async function genericCreate(input: any) {
     
     // Hash password if needed
     if (TABLES_WITH_PASSWORD.includes(input.table.toLowerCase()) && data.senha) {
-      data.senha = await bcrypt.hash(data.senha, 10);
+      data.senha = await hashPassword(data.senha);
     }
 
     if (validator?.validate) await validator.validate(data, prisma);

@@ -14,12 +14,24 @@
 
 import 'dotenv/config';
 import { auth } from '../src/server/auth';
+import { prisma } from '../src/server/db';
 
 const ADMIN_EMAIL = 'admin@locasystem.dev';
 const ADMIN_PASSWORD = 'admin@1234';
 const ADMIN_NAME = 'Administrador';
 
 async function main() {
+    console.log('🧹  Limpando usuários antigos e dados de sessão...');
+    try {
+        await prisma.session.deleteMany();
+        await prisma.account.deleteMany();
+        await prisma.user.deleteMany();
+        await prisma.verification.deleteMany();
+        console.log('✅  Banco de autenticação limpo com sucesso!\n');
+    } catch (e) {
+        console.log('⚠️  Erro ao limpar o banco (pode ser ignorado se for a primeira execução):', e);
+    }
+
     console.log('🔑  Criando usuário padrão de desenvolvimento...\n');
 
     // Tenta criar via better-auth (já faz hash da senha internamente)

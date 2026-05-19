@@ -3,7 +3,7 @@ import { protectedProcedure, publicProcedure, router } from '../trpc';
 import { prisma } from '../trpc';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination';
 import { usuarioCreateSchema, usuarioUpdateSchema } from '../../lib/schemas';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from 'better-auth/crypto';
 import crypto from 'crypto';
 
 export const usuarioRouter = router({
@@ -57,7 +57,7 @@ export const usuarioRouter = router({
         .mutation(async ({ input }) => {
             const userId = crypto.randomUUID();
             const accountId = crypto.randomUUID();
-            const hashedPassword = await bcrypt.hash(input.senha, 10);
+            const hashedPassword = await hashPassword(input.senha);
 
             const existing = await prisma.user.findUnique({
                 where: { email: input.email }
@@ -124,7 +124,7 @@ export const usuarioRouter = router({
                 }
 
                 if (senha) {
-                    const hashedPassword = await bcrypt.hash(senha, 10);
+                    const hashedPassword = await hashPassword(senha);
                     await tx.account.updateMany({
                         where: { userId: input.id, providerId: "credential" },
                         data: { password: hashedPassword }
