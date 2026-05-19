@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
 import { Modal } from '@/components/ui/Modal';
-import { UsuarioForm } from '@/components/forms/UsuarioForm';
+import { UsuarioForm, type UsuarioFormValues } from '@/components/forms/UsuarioForm';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { toast } from 'react-toastify';
 import type { UsuarioCreateInput } from '@/lib/schemas';
@@ -101,7 +101,7 @@ export function UsuariosPage() {
         setModalOpen(true);
     };
 
-    const handleFormSubmit = (data: UsuarioCreateInput & { senha?: string }) => {
+    const handleFormSubmit = (data: UsuarioFormValues) => {
         if (editing?.id) {
             const updateData: any = {
                 nome: data.nome,

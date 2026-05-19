@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -n \"vite,server\" -c \"blue,green\" \"vite\" \"bun run dev:server\"",
     "dev:server": "bun --watch src/server/index.ts",
-    "build": "tsc -b && vite build",
+    "build": "prisma generate && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
