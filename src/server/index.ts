@@ -5,7 +5,7 @@ import { appRouter } from './routers/_app';
 import { createContext } from './trpc';
 import { auth } from './auth';
 
-const app = new Hono();
+export const app = new Hono();
 
 app.use(
   '*',

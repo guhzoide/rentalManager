@@ -4,11 +4,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
 model empresas {
-  id        String    @id @default(uuid())
+  id        String    @id @default(uuid()) @map("_id")
   nome      String
   logoUrl   String?
   cnpj      String?
@@ -18,7 +19,7 @@ model empresas {
 }
 
 model agendas {
-  id          String         @id @default(uuid())
+  id          String         @id @default(uuid()) @map("_id")
   data        DateTime
   clienteId   String
   enderecoId  String
@@ -34,7 +35,7 @@ model agendas {
 }
 
 model agenda_itens {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid()) @map("_id")
   agendaId   String
   itemId     String
   quantidade Int      @default(1)
@@ -43,7 +44,7 @@ model agenda_itens {
 }
 
 model clientes {
-  id        String      @id @default(uuid())
+  id        String      @id @default(uuid()) @map("_id")
   nome      String
   contato   String
   createdAt DateTime    @default(now())
@@ -54,7 +55,7 @@ model clientes {
 }
 
 model enderecos {
-  id          String    @id @default(uuid())
+  id          String    @id @default(uuid()) @map("_id")
   clienteId   String
   cep         String
   rua         String
@@ -69,7 +70,7 @@ model enderecos {
 }
 
 model estoques {
-  id          String    @id @default(uuid())
+  id          String    @id @default(uuid()) @map("_id")
   nome        String
   peso        Float
   largura     Float
@@ -86,7 +87,7 @@ model estoques {
 
 
 model User {
-  id            String    @id
+  id            String    @id @map("_id")
   name          String
   email         String
   emailVerified Boolean   @default(false)
@@ -103,7 +104,7 @@ model User {
 }
 
 model Session {
-  id        String   @id
+  id        String   @id @map("_id")
   expiresAt DateTime
   token     String
   createdAt DateTime @default(now())
@@ -119,7 +120,7 @@ model Session {
 }
 
 model Account {
-  id                    String    @id
+  id                    String    @id @map("_id")
   accountId             String
   providerId            String
   userId                String
@@ -139,7 +140,7 @@ model Account {
 }
 
 model Verification {
-  id         String   @id
+  id         String   @id @map("_id")
   identifier String
   value      String
   expiresAt  DateTime
@@ -151,7 +152,7 @@ model Verification {
 }
 
 model transacoes {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid()) @map("_id")
   descricao String
   valor     Float
   tipo      String
