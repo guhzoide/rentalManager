@@ -1,4 +1,4 @@
-import { GenericValidator } from './index';
+import { GenericValidator } from './index.js';
 
 export const agendasValidator: GenericValidator = {
   // A reconciliação de estoque de múltiplos itens é gerenciada transacionalmente

@@ -1,7 +1,7 @@
-import { prisma } from '../trpc';
+import { prisma } from '../trpc.js';
 import { TRPCError } from '@trpc/server';
 import { hashPassword } from 'better-auth/crypto';
-import { getValidator } from '../validation';
+import { getValidator } from '../validation.js';
 
 const TABLES_WITH_PASSWORD = ['usuarios'];
 const TABLES_OMIT_PASSWORD: Record<string, string[]> = {

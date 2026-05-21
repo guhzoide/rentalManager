@@ -1,4 +1,4 @@
-import { GenericValidator } from './index';
+import { GenericValidator } from './index.js';
 
 export const clientesValidator: GenericValidator = {
   afterSave: async (record: any, tx: any) => {

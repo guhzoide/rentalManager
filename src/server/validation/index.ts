@@ -1,6 +1,6 @@
-import { clientesValidator } from './clientesValidator';
-import { estoquesValidator } from './estoquesValidator';
-import { agendasValidator } from './agendasValidator';
+import { clientesValidator } from './clientesValidator.js';
+import { estoquesValidator } from './estoquesValidator.js';
+import { agendasValidator } from './agendasValidator.js';
 
 export interface GenericValidator {
   validate?: (data: any, tx?: any, originalData?: any) => Promise<any>;
