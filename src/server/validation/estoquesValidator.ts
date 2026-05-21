@@ -1,4 +1,4 @@
-import { GenericValidator } from './index';
+import { GenericValidator } from './index.js';
 
 export const estoquesValidator: GenericValidator = {
   beforeSave: async (data: any) => {

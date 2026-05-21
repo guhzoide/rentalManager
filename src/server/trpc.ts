@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { initTRPC, TRPCError } from '@trpc/server';
-import { prisma } from './db';
-import { auth } from './auth';
+import { prisma } from './db.js';
+import { auth } from './auth.js';
 
 export { prisma };
 

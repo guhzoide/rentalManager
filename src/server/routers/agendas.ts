@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { protectedProcedure, router } from '../trpc';
-import { prisma } from '../trpc';
-import { paginationSchema, getPaginatedResult } from '../utils/pagination';
-import { agendaSchema } from '../../lib/schemas';
+import { protectedProcedure, router } from '../trpc.js';
+import { prisma } from '../trpc.js';
+import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
+import { agendaSchema } from '../../lib/schemas.js';
 import { type agendas } from '@prisma/client';
 
 export const agendaRouter = router({

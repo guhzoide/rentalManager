@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { protectedProcedure, router } from '../trpc';
-import { prisma } from '../trpc';
-import { paginationSchema, getPaginatedResult } from '../utils/pagination';
+import { protectedProcedure, router } from '../trpc.js';
+import { prisma } from '../trpc.js';
+import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
 import { type transacoes } from '@prisma/client';
 
 const transacaoInputSchema = z.object({

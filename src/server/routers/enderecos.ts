@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { protectedProcedure, router } from '../trpc';
-import { prisma } from '../trpc';
-import { paginationSchema, getPaginatedResult } from '../utils/pagination';
-import { enderecoSchema } from '../../lib/schemas';
+import { protectedProcedure, router } from '../trpc.js';
+import { prisma } from '../trpc.js';
+import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
+import { enderecoSchema } from '../../lib/schemas.js';
 
 
 import { type enderecos } from '@prisma/client';

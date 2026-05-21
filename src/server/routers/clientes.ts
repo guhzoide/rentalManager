@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { protectedProcedure, router } from '../trpc';
-import { prisma } from '../trpc';
-import { paginationSchema, getPaginatedResult } from '../utils/pagination';
-import { clienteSchema } from '../../lib/schemas';
+import { protectedProcedure, router } from '../trpc.js';
+import { prisma } from '../trpc.js';
+import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
+import { clienteSchema } from '../../lib/schemas.js';
 
 
 import { type clientes } from '@prisma/client';
