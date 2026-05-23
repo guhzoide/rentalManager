@@ -10,7 +10,7 @@ export const app = new Hono();
 app.use(
   '*',
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000', 'https://rental-manager-rosy.vercel.app/'],
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'https://rental-manager-rosy.vercel.app'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,

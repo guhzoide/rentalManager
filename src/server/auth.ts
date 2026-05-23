@@ -2,7 +2,11 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
 
-const origins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://rental-manager-rosy.vercel.app",
+];
 
 let baseURL = process.env.BETTER_AUTH_URL || "";
 
