@@ -5,3 +5,4 @@ dist/
 # Files
 .env
 tasks.md
+docker-compose.yml
