@@ -5,13 +5,13 @@ import { Prisma } from '@prisma/client';
  */
 export function getPrismaModelName(tableName: string): string {
     if (!tableName) return '';
-    
+
     // Tenta encontrar o modelo no DMMF ignorando case
     const models = Prisma.dmmf.datamodel.models;
     const found = models.find(m => m.name.toLowerCase() === tableName.toLowerCase());
-    
+
     if (found) return found.name;
-    
+
     // Fallback: primeira letra minúscula (padrão comum)
     return tableName.charAt(0).toLowerCase() + tableName.slice(1);
 }
@@ -22,11 +22,11 @@ export function getPrismaModelName(tableName: string): string {
 export function getPrimaryKeyFields(modelName: string): string[] {
     const model = Prisma.dmmf.datamodel.models.find(m => m.name === modelName);
     if (!model) return ['id'];
-    
+
     if (model.primaryKey) {
         return [...model.primaryKey.fields];
     }
-    
+
     const idFields = model.fields.filter(f => f.isId).map(f => f.name);
     return idFields.length > 0 ? idFields : ['id'];
 }
@@ -75,7 +75,7 @@ export function getByteFieldNames(modelName: string): string[] {
 export function isForeignKey(modelName: string, fieldName: string): boolean {
     const model = Prisma.dmmf.datamodel.models.find(m => m.name === modelName);
     if (!model) return false;
-    
+
     // No Prisma, chaves estrangeiras são campos escalares referenciados por um campo de relação
     return model.fields.some(f => f.kind === 'object' && f.relationFromFields?.includes(fieldName));
 }
