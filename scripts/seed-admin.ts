@@ -1,17 +1,3 @@
-/**
- * Seed de usuário padrão de desenvolvimento.
- *
- * Cria um usuário admin para uso durante o desenvolvimento caso
- * ele ainda não exista no banco.
- *
- * Uso:
- *   bun run scripts/seed-admin.ts
- *
- * Credenciais criadas:
- *   E-mail:  admin@locasystem.dev
- *   Senha:   admin123
- */
-
 import 'dotenv/config';
 import { auth } from '../src/server/auth';
 import { prisma } from '../src/server/db';
