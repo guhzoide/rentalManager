@@ -1902,7 +1902,7 @@ select.form-control {
     right: 0;
     height: 85vh;
     width: 100%;
-    z-index: 2000;
+    z-index: 1200;
     border: none;
     border-radius: 24px 24px 0 0;
     background: var(--bg-card);
@@ -1925,7 +1925,7 @@ select.form-control {
     left: 0;
     right: 0;
     height: 85vh;
-    z-index: 2000;
+    z-index: 1200;
     border-radius: 24px 24px 0 0;
     background: var(--bg-card);
     padding: 24px;
@@ -1953,7 +1953,7 @@ select.form-control {
     font-size: 24px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     border: none;
-    z-index: 2100;
+    z-index: 1210;
     cursor: pointer;
     transition: transform 0.1s;
   }
