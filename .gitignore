@@ -6,3 +6,5 @@ dist/
 .env
 tasks.md
 docker-compose.yml
+seed-admin.ts
+seed-empresa.ts

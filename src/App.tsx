@@ -115,6 +115,12 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
         return () => window.removeEventListener('popstate', checkRoute);
     }, []);
 
+    const { data: empresaData, isLoading: isLoadingList } = trpc.empresa.list.useQuery({ id: "58f51956-983a-4046-b011-ca785ff41205" });
+
+    if (isLoadingList) {
+        return <PageLoader />;
+    }
+
     if (isCatalog) {
         return (
             <Suspense fallback={<PageLoader />}>
@@ -189,8 +195,8 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
             {/* Sidebar */}
             <aside className="sidebar">
                 <div className="sidebar-logo">
-                    <div className="sidebar-logo-icon">🏗</div>
-                    <span className="sidebar-logo-text">LocaSystem</span>
+                    <div className="sidebar-logo-icon"><img src={empresaData?.logoUrl ?? "/favicon.svg"} alt="" style={{ width: '100%', height: '100%', borderRadius: '20%' }} /></div>
+                    <span className="sidebar-logo-text">{empresaData?.nome}</span>
                     <button
                         className="btn btn-ghost btn-sm"
                         style={{ justifyContent: 'right', alignItems: 'center' }}

@@ -38,6 +38,18 @@ export const auth = betterAuth({
         expiresIn: 60 * 60,
         updateAge: 60 * 5,
     },
+    databaseHooks: {
+        session: {
+            create: {
+                before: async (session) => {
+                    await prisma.session.deleteMany({
+                        where: { userId: session.userId },
+                    });
+                    return { data: session };
+                },
+            },
+        },
+    },
     baseURL: baseURL || undefined,
     trustedOrigins: origins,
 });
