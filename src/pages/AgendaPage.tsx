@@ -377,13 +377,33 @@ export function AgendaPage() {
 
                 {/* List */}
                 {formMode === 'list' && selectedDate && (
-                    <div className="agenda-form-card">
-                        <div className="agenda-form-title">
-                            Agendamentos do Dia
-                            {' — '}
-                            <span style={{ color: 'var(--accent-hover)', fontWeight: 400 }}>
-                                {selectedDate.format('DD/MM/YYYY')}
-                            </span>
+                    <div className="agenda-form-card mobile-modal">
+                        <div className="agenda-form-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                Agendamentos do Dia
+                                {' — '}
+                                <span style={{ color: 'var(--accent-hover)', fontWeight: 400 }}>
+                                    {selectedDate.format('DD/MM/YYYY')}
+                                </span>
+                            </div>
+                            <button 
+                                onClick={() => setFormMode('view')}
+                                style={{ 
+                                    background: 'var(--danger-light)', 
+                                    color: 'var(--danger)', 
+                                    border: 'none', 
+                                    borderRadius: '50%', 
+                                    width: 32, 
+                                    height: 32, 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center',
+                                    fontSize: 18,
+                                    cursor: 'pointer' 
+                                }}
+                            >
+                                ×
+                            </button>
                         </div>
                         <div style={{ marginTop: 16 }}>
                             <DataGrid
@@ -399,13 +419,33 @@ export function AgendaPage() {
 
                 {/* Form */}
                 {(formMode === 'new' || formMode === 'edit') && selectedDate && (
-                    <div className="agenda-form-card">
-                        <div className="agenda-form-title">
-                            {formMode === 'new' ? '➕ Novo Agendamento' : '✏️ Editar Agendamento'}
-                            {' — '}
-                            <span style={{ color: 'var(--accent-hover)', fontWeight: 400 }}>
-                                {selectedDate.format('DD/MM/YYYY')}
-                            </span>
+                    <div className="agenda-form-card mobile-modal">
+                        <div className="agenda-form-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                {formMode === 'new' ? '➕ Novo Agendamento' : '✏️ Editar Agendamento'}
+                                {' — '}
+                                <span style={{ color: 'var(--accent-hover)', fontWeight: 400 }}>
+                                    {selectedDate.format('DD/MM/YYYY')}
+                                </span>
+                            </div>
+                            <button 
+                                onClick={() => setFormMode('list')}
+                                style={{ 
+                                    background: 'var(--danger-light)', 
+                                    color: 'var(--danger)', 
+                                    border: 'none', 
+                                    borderRadius: '50%', 
+                                    width: 32, 
+                                    height: 32, 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center',
+                                    fontSize: 18,
+                                    cursor: 'pointer' 
+                                }}
+                            >
+                                ×
+                            </button>
                         </div>
 
                         <AgendaForm
@@ -463,7 +503,7 @@ export function AgendaPage() {
                 )}
 
                 {formMode === 'view' && (
-                    <div className="agenda-form-card" style={{ alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+                    <div className="agenda-form-card mobile-hide" style={{ alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
                         <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                             <div style={{ fontSize: 48, marginBottom: 12 }}>📅</div>
                             <p>Clique em uma data no calendário</p>

@@ -42,7 +42,7 @@ interface DragState {
     origH: number;
 }
 
-export function KanvasPage() {
+export function CanvasPage() {
     const { data: estoqueData } = trpc.estoque.list.useQuery({ limit: 1000 });
     const { data: clientesData } = trpc.clientes.list.useQuery({ limit: 1000 });
     const { data: agendasData } = trpc.agendas.list.useQuery({ limit: 1000 });
@@ -60,6 +60,7 @@ export function KanvasPage() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [zoom, setZoom] = useState(0.85);
     const [showGrid, setShowGrid] = useState(false);
+    const [isMobilePropsOpen, setIsMobilePropsOpen] = useState(false);
     const dragRef = useRef<DragState | null>(null);
     const editingTextRef = useRef<string | null>(null);
 
@@ -364,17 +365,9 @@ export function KanvasPage() {
             </div>
 
             {/* Canvas + properties */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div className="kanvas-layout">
                 <div
-                    style={{
-                        flex: 1,
-                        overflow: 'auto',
-                        background: 'var(--bg-primary)',
-                        padding: 40,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'flex-start',
-                    }}
+                    className="kanvas-canvas-area"
                     onClick={() => setSelectedId(null)}
                 >
                     <div
@@ -421,15 +414,28 @@ export function KanvasPage() {
                     </div>
                 </div>
 
-                <aside style={{
-                    width: 260,
-                    borderLeft: '1px solid var(--border)',
-                    background: 'var(--bg-secondary)',
-                    padding: 14,
-                    overflowY: 'auto',
-                    fontSize: 13,
-                }}>
-                    <h3 style={{ marginTop: 0, fontSize: 14 }}>Propriedades</h3>
+                <aside className={`kanvas-sidebar ${isMobilePropsOpen ? 'open' : ''}`}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <h3 style={{ margin: 0, fontSize: 14 }}>Propriedades</h3>
+                        <button
+                            className="desktop-hide"
+                            onClick={() => setIsMobilePropsOpen(false)}
+                            style={{
+                                background: 'var(--danger-light)',
+                                color: 'var(--danger)',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: 32,
+                                height: 32,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 18,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            ×
+                        </button>
+                    </div>
                     {!selected && (
                         <p style={{ color: 'var(--text-muted, #94a3b8)', fontSize: 12 }}>
                             Selecione um elemento no canvas para editar.
@@ -464,6 +470,14 @@ export function KanvasPage() {
                     </Field>
                 </aside>
             </div>
+
+            <button
+                className="mobile-fab"
+                onClick={() => setIsMobilePropsOpen(!isMobilePropsOpen)}
+                title={isMobilePropsOpen ? "Fechar Propriedades" : "Propriedades"}
+            >
+                {isMobilePropsOpen ? '↓' : '⚙️'}
+            </button>
         </div>
     );
 }
