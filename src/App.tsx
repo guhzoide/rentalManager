@@ -11,7 +11,7 @@ const UsuariosPage = lazy(() => import('@/pages/UsuariosPage').then(m => ({ defa
 const AgendaPage = lazy(() => import('@/pages/AgendaPage').then(m => ({ default: m.AgendaPage })));
 const FinancePage = lazy(() => import('@/pages/FinancePage').then(m => ({ default: m.FinancePage })));
 const CatalogPage = lazy(() => import('@/pages/CatalogPage').then(m => ({ default: m.CatalogPage })));
-const KanvasPage = lazy(() => import('@/pages/KanvasPage').then(m => ({ default: m.KanvasPage })));
+const CanvasPage = lazy(() => import('@/pages/CanvasPage').then(m => ({ default: m.CanvasPage })));
 
 import { useSession, signOut } from '@/lib/auth-client';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -79,7 +79,7 @@ function renderPage(id: string) {
         case 'usuarios': return <UsuariosPage />;
         case 'agenda': return <AgendaPage />;
         case 'financeiro': return <FinancePage />;
-        case 'kanvas': return <KanvasPage />;
+        case 'kanvas': return <CanvasPage />;
         default: return null;
     }
 }
@@ -95,6 +95,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     const [openTabs, setOpenTabs] = useState<Tab[]>([]);
     const [activeTab, setActiveTab] = useState<string | null>(null); // null = menu
     const [isCatalog, setIsCatalog] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Theme effect
     useEffect(() => {
@@ -165,6 +166,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     }
 
     const navigate = (id: string) => {
+        setIsSidebarOpen(false);
         if (id === 'menu') {
             setActiveTab(null);
             return;
@@ -192,8 +194,14 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
 
     return (
         <div className="app-layout">
+            {/* Sidebar Overlay */}
+            <div
+                className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`}
+                onClick={() => setIsSidebarOpen(false)}
+            />
+
             {/* Sidebar */}
-            <aside className="sidebar">
+            <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
                 <div className="sidebar-logo">
                     <div className="sidebar-logo-icon"><img src={empresaData?.logoUrl ?? "/favicon.svg"} alt="" style={{ width: '100%', height: '100%', borderRadius: '20%' }} /></div>
                     <span className="sidebar-logo-text">{empresaData?.nome}</span>
@@ -244,6 +252,14 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
 
             {/* Main area */}
             <div className="main-area">
+                {/* Mobile Topbar */}
+                <div className="mobile-topbar desktop-hide">
+                    <button className="mobile-hamburger" onClick={() => setIsSidebarOpen(true)}>
+                        ☰
+                    </button>
+                    <span className="mobile-title">{empresaData?.nome || 'RentalManager'}</span>
+                </div>
+
                 {/* Tab bar */}
                 {openTabs.length > 0 && (
                     <div className="tab-bar">

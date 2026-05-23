@@ -89,10 +89,10 @@ export function AgendaForm({
     const selectedEndereco = filteredEnderecos.find((e) => e.id === enderecoId) ?? null;
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="agenda-form-grid">
 
             {/* ── Itens Locados ── */}
-            <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="agenda-form-full-width" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -333,7 +333,7 @@ export function AgendaForm({
             </div>
 
             {/* ── Observações ── */}
-            <div style={{ gridColumn: 'span 2' }}>
+            <div className="agenda-form-full-width">
                 <TextField
                     label="Observação"
                     variant="outlined"

@@ -25,6 +25,7 @@ export function FinancePage() {
     const today = dayjs();
     const [selectedMonth, setSelectedMonth] = useState(today.month());
     const [selectedYear, setSelectedYear] = useState(String(today.year()));
+    const [isMobileFormOpen, setIsMobileFormOpen] = useState(false);
 
     const utils = trpc.useUtils();
 
@@ -385,7 +386,7 @@ export function FinancePage() {
                 </div>
             </div>
 
-            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
+            <div className="finance-grid">
 
                 {/* Historic Table */}
                 <div className="card" style={{ padding: '20px' }}>
@@ -407,10 +408,30 @@ export function FinancePage() {
                 </div>
 
                 {/* Form to insert Manual Transaction */}
-                <div className="card" style={{ padding: '20px', border: '1px solid var(--border)' }}>
-                    <h3 style={{ fontSize: '18px', marginBottom: '16px', fontWeight: '600' }}>
-                        💸 Nova Movimentação
-                    </h3>
+                <div className={`card finance-form-card ${isMobileFormOpen ? 'mobile-modal' : 'mobile-hide'}`} style={{ padding: '20px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <h3 style={{ fontSize: '18px', margin: 0, fontWeight: '600' }}>
+                            💸 Nova Movimentação
+                        </h3>
+                        <button 
+                            className="desktop-hide"
+                            onClick={() => setIsMobileFormOpen(false)}
+                            style={{ 
+                                background: 'var(--danger-light)', 
+                                color: 'var(--danger)', 
+                                border: 'none', 
+                                borderRadius: '50%', 
+                                width: 32, 
+                                height: 32, 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                fontSize: 18,
+                                cursor: 'pointer' 
+                            }}
+                        >
+                            ×
+                        </button>
+                    </div>
 
                     <form onSubmit={handleCreateTransaction} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div className="form-group">
@@ -499,6 +520,14 @@ export function FinancePage() {
                 onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
             />
+
+            <button 
+                className="mobile-fab desktop-hide" 
+                onClick={() => setIsMobileFormOpen(!isMobileFormOpen)}
+                title={isMobileFormOpen ? "Fechar" : "Nova Movimentação"}
+            >
+                {isMobileFormOpen ? '↓' : '➕'}
+            </button>
         </div>
     );
 }
