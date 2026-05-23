@@ -1,7 +1,16 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/trpc/(.*)", "destination": "/api" },
-    { "source": "/((?!api|trpc).*)" , "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/trpc/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/((?!api|trpc).*)",
+      "destination": "/index.html"
+    }
   ]
 }

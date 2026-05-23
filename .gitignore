@@ -1,6 +1,8 @@
 # Folders
 node_modules
+dist/
 
 # Files
 .env
 tasks.md
+docker-compose.yml

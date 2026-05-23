@@ -40,6 +40,13 @@ const modules = [
         desc: 'Gerencie o fluxo de caixa e transações',
         color: 'rgba(16, 185, 129, 0.2)',
     },
+    {
+        id: 'kanvas',
+        icon: '🖼️',
+        title: 'Kanvas',
+        desc: 'Crie e gerencie documentos personalizados',
+        color: 'rgba(99, 102, 241, 0.2)',
+    },
 ];
 
 export function MenuPage({ onNavigate }: MenuPageProps) {
@@ -48,7 +55,7 @@ export function MenuPage({ onNavigate }: MenuPageProps) {
     return (
         <div className="menu-page">
             <div className="menu-welcome">
-                <h1>Sistema de locação</h1>
+                {/* <h1>Sistema de locação</h1> */}
                 <p>Bem-vindo(a), {session?.user?.name}!</p>
             </div>
 

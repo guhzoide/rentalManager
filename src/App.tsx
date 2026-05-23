@@ -1,20 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { trpc, trpcClient } from '@/lib/trpc';
 
 import { MenuPage } from '@/pages/MenuPage';
-import { ClientesPage } from '@/pages/ClientesPage';
-import { EstoquePage } from '@/pages/EstoquePage';
-import { UsuariosPage } from '@/pages/UsuariosPage';
-import { AgendaPage } from '@/pages/AgendaPage';
-import { FinancePage } from '@/pages/FinancePage';
-import { CatalogPage } from '@/pages/CatalogPage';
 import { LoginPage } from '@/pages/LoginPage';
+
+const ClientesPage = lazy(() => import('@/pages/ClientesPage').then(m => ({ default: m.ClientesPage })));
+const EstoquePage = lazy(() => import('@/pages/EstoquePage').then(m => ({ default: m.EstoquePage })));
+const UsuariosPage = lazy(() => import('@/pages/UsuariosPage').then(m => ({ default: m.UsuariosPage })));
+const AgendaPage = lazy(() => import('@/pages/AgendaPage').then(m => ({ default: m.AgendaPage })));
+const FinancePage = lazy(() => import('@/pages/FinancePage').then(m => ({ default: m.FinancePage })));
+const CatalogPage = lazy(() => import('@/pages/CatalogPage').then(m => ({ default: m.CatalogPage })));
+const KanvasPage = lazy(() => import('@/pages/KanvasPage').then(m => ({ default: m.KanvasPage })));
+
 import { useSession, signOut } from '@/lib/auth-client';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useMemo } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+function PageLoader() {
+    return (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            minHeight: '200px',
+            color: 'var(--text-secondary)'
+        }}>
+            <div style={{ textAlign: 'center' }}>
+                <div style={{
+                    width: '28px',
+                    height: '28px',
+                    border: '3px solid var(--border)',
+                    borderTopColor: 'var(--accent)',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 10px auto'
+                }} />
+                <p style={{ fontSize: '12px' }}>Carregando...</p>
+            </div>
+        </div>
+    );
+}
 
 // ─── Tab system ───────────────────────────────────────────────────────────────
 
@@ -30,6 +59,7 @@ const ALL_TABS: Record<string, Tab> = {
     estoque: { id: 'estoque', label: 'Estoque', icon: '📦' },
     usuarios: { id: 'usuarios', label: 'Usuários', icon: '👤' },
     financeiro: { id: 'financeiro', label: 'Financeiro', icon: '💵' },
+    kanvas: { id: 'kanvas', label: 'Kanvas', icon: '🖼️' },
 };
 
 const SIDEBAR_ITEMS = [
@@ -39,6 +69,7 @@ const SIDEBAR_ITEMS = [
     { id: 'estoque', label: 'Estoque', icon: '📦' },
     { id: 'usuarios', label: 'Usuários', icon: '👤' },
     { id: 'financeiro', label: 'Financeiro', icon: '💵' },
+    { id: 'kanvas', label: 'Kanvas', icon: '🖼️' },
 ];
 
 function renderPage(id: string) {
@@ -48,6 +79,7 @@ function renderPage(id: string) {
         case 'usuarios': return <UsuariosPage />;
         case 'agenda': return <AgendaPage />;
         case 'financeiro': return <FinancePage />;
+        case 'kanvas': return <KanvasPage />;
         default: return null;
     }
 }
@@ -84,7 +116,11 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     }, []);
 
     if (isCatalog) {
-        return <CatalogPage />;
+        return (
+            <Suspense fallback={<PageLoader />}>
+                <CatalogPage />
+            </Suspense>
+        );
     }
 
     if (sessionLoading) {
@@ -240,7 +276,9 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                                 style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
                             >
                                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                                    {renderPage(tab.id)}
+                                    <Suspense fallback={<PageLoader />}>
+                                        {renderPage(tab.id)}
+                                    </Suspense>
                                 </div>
                             </div>
                         )
