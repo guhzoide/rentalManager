@@ -41,9 +41,9 @@ const modules = [
         color: 'rgba(16, 185, 129, 0.2)',
     },
     {
-        id: 'kanvas',
+        id: 'canvas',
         icon: '🖼️',
-        title: 'Kanvas',
+        title: 'Canvas',
         desc: 'Crie e gerencie documentos personalizados',
         color: 'rgba(99, 102, 241, 0.2)',
     },

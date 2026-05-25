@@ -69,6 +69,7 @@ export interface KanvasDoc {
     name: string;
     pageWidth: number;
     pageHeight: number;
+    type?: 'nf' | 'recibo' | 'os' | 'blank';
     elements: KanvasElement[];
 }
 
@@ -109,6 +110,7 @@ export function emptyDocument(name = 'Novo documento'): KanvasDoc {
 
 export function templateNotaFiscal(): KanvasDoc {
     const doc = emptyDocument('Nota Fiscal');
+    doc.type = 'nf';
     doc.elements = [
         {
             id: newId(), type: 'text', x: 40, y: 30, width: 714, height: 40,

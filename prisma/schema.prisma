@@ -160,3 +160,11 @@ model transacoes {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model documentos {
+  id        String   @id @default(uuid()) @map("_id")
+  nome      String
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

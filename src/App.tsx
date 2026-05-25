@@ -59,7 +59,7 @@ const ALL_TABS: Record<string, Tab> = {
     estoque: { id: 'estoque', label: 'Estoque', icon: '📦' },
     usuarios: { id: 'usuarios', label: 'Usuários', icon: '👤' },
     financeiro: { id: 'financeiro', label: 'Financeiro', icon: '💵' },
-    kanvas: { id: 'kanvas', label: 'Kanvas', icon: '🖼️' },
+    canvas: { id: 'canvas', label: 'Canvas', icon: '🖼️' },
 };
 
 const SIDEBAR_ITEMS = [
@@ -69,7 +69,7 @@ const SIDEBAR_ITEMS = [
     { id: 'estoque', label: 'Estoque', icon: '📦' },
     { id: 'usuarios', label: 'Usuários', icon: '👤' },
     { id: 'financeiro', label: 'Financeiro', icon: '💵' },
-    { id: 'kanvas', label: 'Kanvas', icon: '🖼️' },
+    { id: 'canvas', label: 'Canvas', icon: '🖼️' },
 ];
 
 function renderPage(id: string) {
@@ -79,7 +79,7 @@ function renderPage(id: string) {
         case 'usuarios': return <UsuariosPage />;
         case 'agenda': return <AgendaPage />;
         case 'financeiro': return <FinancePage />;
-        case 'kanvas': return <CanvasPage />;
+        case 'canvas': return <CanvasPage />;
         default: return null;
     }
 }
