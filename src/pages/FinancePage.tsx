@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
-import { DataGrid, Column } from '@/components/ui/DataGrid';
+import { DataGrid } from '@/components/ui/DataGrid';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import {
     ResponsiveContainer,
@@ -19,70 +19,17 @@ import {
     PieChart,
     Pie,
 } from 'recharts';
-
-interface FinanceMovement {
-    id: string;
-    descricao: string;
-    valor: number;
-    tipo: 'LUCRO' | 'GASTO';
-    data: string;
-    isAgenda?: boolean;
-}
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-        return (
-            <div style={{
-                background: 'rgba(15, 23, 42, 0.95)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
-            }}>
-                <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: '700', color: '#94a3b8' }}>
-                    Dia {label}
-                </p>
-                {payload.map((p: any) => (
-                    <p key={p.name} style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: p.color || p.fill }}>
-                        {p.name}: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.value)}
-                    </p>
-                ))}
-            </div>
-        );
-    }
-    return null;
-};
-
-const CustomCountTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-        return (
-            <div style={{
-                background: 'rgba(15, 23, 42, 0.95)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
-            }}>
-                <p style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '700', color: '#fff' }}>
-                    {label}
-                </p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'var(--primary)' }}>
-                    Aluguéis: {payload[0].value}
-                </p>
-            </div>
-        );
-    }
-    return null;
-};
-
-const MONTHS = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
-
-const YEARS = ['2024', '2025', '2026', '2027', '2028'];
+import {
+    MONTHS,
+    YEARS,
+    formatCurrency,
+} from '@/utils/financeUtils';
+import { useFinanceData } from '@/hooks/useFinanceData';
+import {
+    CustomTooltip,
+    CustomCountTooltip,
+    getColumns,
+} from '@/components/finance/financeComponents';
 
 export function FinancePage() {
     const today = dayjs();
@@ -123,213 +70,17 @@ export function FinancePage() {
         });
     };
 
-    const startOfMonth = useMemo(() => {
-        return dayjs(`${selectedYear}-${selectedMonth + 1}-01`).startOf('month');
-    }, [selectedMonth, selectedYear]);
-
-    const endOfMonth = useMemo(() => {
-        return startOfMonth.endOf('month');
-    }, [startOfMonth]);
-
-    // Queries
-    const { data: transacoesRes, isLoading: loadingTrans } = trpc.transacoes.list.useQuery({
-        pagina: 1,
-        limit: 1000,
-        filtros: {
-            data: {
-                gte: startOfMonth.toISOString(),
-                lte: endOfMonth.toISOString(),
-            }
-        }
-    });
-
-    const { data: agendasRes, isLoading: loadingAgendas } = trpc.agendas.list.useQuery({
-        pagina: 1,
-        limit: 1000,
-        filtros: {
-            data: {
-                gte: startOfMonth.toISOString(),
-                lte: endOfMonth.toISOString(),
-            }
-        }
-    });
-
-    // All-time queries for global metrics
-    const { data: allAgendasRes } = trpc.agendas.list.useQuery({ pagina: 1, limit: 1000 });
-    const { data: allClientesRes } = trpc.clientes.list.useQuery({ pagina: 1, limit: 1000 });
-    const { data: allTransacoesRes } = trpc.transacoes.list.useQuery({ pagina: 1, limit: 1000 });
-
-    const [activeSubTab, setActiveSubTab] = useState<'analytics' | 'movements'>('movements');
-
-    // 1. Most rented toys (brinquedos mais alugados)
-    const mostRentedToys = useMemo(() => {
-        if (!allAgendasRes?.data) return [];
-        const counts: Record<string, { nome: string; count: number }> = {};
-
-        allAgendasRes.data.forEach((agenda: any) => {
-            agenda.itens?.forEach((item: any) => {
-                const id = item.itemId;
-                const nome = item.estoques?.nome || 'Item Desconhecido';
-                const qty = item.quantidade || 1;
-                if (!counts[id]) {
-                    counts[id] = { nome, count: 0 };
-                }
-                counts[id].count += qty;
-            });
-        });
-
-        const list = Object.values(counts);
-        const maxVal = Math.max(...list.map(x => x.count), 1);
-
-        return list
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 5)
-            .map(x => ({ ...x, pct: (x.count / maxVal) * 100 }));
-    }, [allAgendasRes]);
-
-    // 2. Oldest clients (clientes mais antigos)
-    const oldestClients = useMemo(() => {
-        if (!allClientesRes?.data) return [];
-        return [...allClientesRes.data]
-            .sort((a, b) => dayjs(a.createdAt).diff(dayjs(b.createdAt)))
-            .slice(0, 5);
-    }, [allClientesRes]);
-
-    // 3. Clients that spend the most (clientes que mais gastam)
-    const topSpendingClients = useMemo(() => {
-        if (!allAgendasRes?.data) return [];
-        const spends: Record<string, { nome: string; total: number }> = {};
-
-        allAgendasRes.data.forEach((agenda: any) => {
-            const cId = agenda.clienteId;
-            const nome = agenda.clientes?.nome || 'Cliente Desconhecido';
-            const val = agenda.valorTotal || 0;
-            if (!spends[cId]) {
-                spends[cId] = { nome, total: 0 };
-            }
-            spends[cId].total += val;
-        });
-
-        const list = Object.values(spends);
-        const maxVal = Math.max(...list.map(x => x.total), 1);
-
-        return list
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 5)
-            .map(x => ({ ...x, pct: (x.total / maxVal) * 100 }));
-    }, [allAgendasRes]);
-
-    // 4. Company expenses breakdown (gastos da empresa)
-    const expensesBreakdown = useMemo(() => {
-        if (!allTransacoesRes?.data) return { list: [], total: 0 };
-        const spends: Record<string, number> = {};
-        let total = 0;
-
-        allTransacoesRes.data
-            .filter((t: any) => t.tipo === 'GASTO')
-            .forEach((t: any) => {
-                const desc = t.descricao.trim().split(' ')[0] || 'Geral';
-                const val = t.valor || 0;
-                spends[desc] = (spends[desc] || 0) + val;
-                total += val;
-            });
-
-        const list = Object.entries(spends).map(([category, value]) => ({
-            category,
-            value,
-            pct: total > 0 ? (value / total) * 100 : 0
-        }));
-
-        return {
-            list: list.sort((a, b) => b.value - a.value).slice(0, 5),
-            total
-        };
-    }, [allTransacoesRes]);
-
-    // Combined Movements List
-    const movements = useMemo(() => {
-        const list: FinanceMovement[] = [];
-
-        // Manual transactions
-        if (transacoesRes?.data) {
-            transacoesRes.data.forEach((t: any) => {
-                list.push({
-                    id: t.id,
-                    descricao: t.descricao,
-                    valor: t.valor,
-                    tipo: t.tipo as 'LUCRO' | 'GASTO',
-                    data: t.data,
-                    isAgenda: false,
-                });
-            });
-        }
-
-        // Agenda rentals (count as Lucro automatically)
-        if (agendasRes?.data) {
-            agendasRes.data.forEach((a: any) => {
-                if (a.valorTotal > 0) {
-                    list.push({
-                        id: a.id,
-                        descricao: `Locação — ${a.clientes?.nome || 'Cliente'}`,
-                        valor: a.valorTotal,
-                        tipo: 'LUCRO',
-                        data: a.data,
-                        isAgenda: true,
-                    });
-                }
-            });
-        }
-
-        // Sort by date desc
-        return list.sort((a, b) => dayjs(b.data).diff(dayjs(a.data)));
-    }, [transacoesRes, agendasRes]);
-
-    // Totals Calculations
-    const totals = useMemo(() => {
-        let lucros = 0;
-        let gastos = 0;
-
-        movements.forEach((m) => {
-            if (m.tipo === 'LUCRO') {
-                lucros += m.valor;
-            } else {
-                gastos += m.valor;
-            }
-        });
-
-        return {
-            lucros,
-            gastos,
-            saldo: lucros - gastos,
-        };
-    }, [movements]);
-
-    // Chronological cash-flow trend (daily revenue vs expenses) for the selected month
-    const dailyTrendData = useMemo(() => {
-        const daysInMonth = startOfMonth.daysInMonth();
-        const data: { dia: string; Entradas: number; Saídas: number }[] = [];
-        
-        for (let i = 1; i <= daysInMonth; i++) {
-            data.push({
-                dia: String(i),
-                Entradas: 0,
-                Saídas: 0
-            });
-        }
-
-        movements.forEach((m) => {
-            const dayIdx = dayjs(m.data).date() - 1;
-            if (dayIdx >= 0 && dayIdx < data.length) {
-                if (m.tipo === 'LUCRO') {
-                    data[dayIdx].Entradas += m.valor;
-                } else {
-                    data[dayIdx].Saídas += m.valor;
-                }
-            }
-        });
-
-        return data;
-    }, [movements, startOfMonth]);
+    const {
+        loadingTrans,
+        loadingAgendas,
+        mostRentedToys,
+        oldestClients,
+        topSpendingClients,
+        expensesBreakdown,
+        movements,
+        totals,
+        dailyTrendData
+    } = useFinanceData(selectedMonth, selectedYear);
 
     // Mutations
     const createMutation = trpc.transacoes.create.useMutation({
@@ -379,89 +130,7 @@ export function FinancePage() {
         );
     };
 
-    const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-    };
-
-    const columns: Column<FinanceMovement>[] = [
-        {
-            key: 'descricao',
-            label: 'Descrição',
-            render: (_, row) => (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{row.descricao}</span>
-                    {row.isAgenda && (
-                        <span style={{
-                            fontSize: '10px',
-                            background: 'rgba(var(--primary-rgb), 0.15)',
-                            color: 'var(--primary)',
-                            padding: '2px 6px',
-                            borderRadius: '12px',
-                            fontWeight: '600',
-                            border: '1px solid rgba(var(--primary-rgb), 0.3)'
-                        }}>
-                            Locação
-                        </span>
-                    )}
-                </div>
-            )
-        },
-        {
-            key: 'tipo',
-            label: 'Tipo',
-            render: (_, row) => (
-                <span className={`pill ${row.tipo === 'LUCRO' ? 'success' : 'danger'}`} style={{
-                    background: row.tipo === 'LUCRO' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)',
-                    color: row.tipo === 'LUCRO' ? '#4caf50' : '#f44336',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    fontSize: '12px',
-                    border: row.tipo === 'LUCRO' ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(244,67,54,0.3)'
-                }}>
-                    {row.tipo === 'LUCRO' ? '🟢 ENTRADA' : '🔴 SAÍDA'}
-                </span>
-            )
-        },
-        {
-            key: 'data',
-            label: 'Data',
-            render: (_, row) => dayjs(row.data).format('DD/MM/YYYY')
-        },
-        {
-            key: 'valor',
-            label: 'Valor',
-            render: (_, row) => (
-                <span style={{
-                    fontWeight: '700',
-                    color: row.tipo === 'LUCRO' ? '#4caf50' : '#f44336'
-                }}>
-                    {row.tipo === 'LUCRO' ? '+' : '-'} {formatCurrency(row.valor)}
-                </span>
-            )
-        },
-        {
-            key: 'id',
-            label: 'Ações',
-            render: (_, row) => {
-                if (row.isAgenda) return <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic' }}>Automático</span>;
-                return (
-                    <button
-                        className="btn btn-ghost"
-                        onClick={() => handleDelete(row.id)}
-                        style={{
-                            padding: '4px 8px',
-                            color: 'var(--danger)',
-                            borderRadius: '4px'
-                        }}
-                        title="Excluir Transação"
-                    >
-                        🗑️
-                    </button>
-                );
-            }
-        }
-    ];
+    const columns = getColumns(handleDelete);
 
     return (
         <div className="page-inner">
