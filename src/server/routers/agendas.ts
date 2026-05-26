@@ -47,6 +47,7 @@ export const agendaRouter = router({
                         enderecoId: input.enderecoId,
                         observacao: input.observacao,
                         desconto: input.desconto,
+                        frete: input.frete,
                         valorTotal: input.valorTotal,
                         itens: {
                             create: input.itens.map((i) => ({

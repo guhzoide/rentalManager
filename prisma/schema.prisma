@@ -9,13 +9,18 @@ datasource db {
 }
 
 model empresas {
-  id        String    @id @default(uuid()) @map("_id")
-  nome      String
-  logoUrl   String?
-  cnpj      String?
-  telefone  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(uuid()) @map("_id")
+  nome        String
+  logoUrl     String?
+  cnpj        String?
+  telefone    String?
+  logradouro  String?
+  numero      String?
+  cep         String?
+  bairro      String?
+  complemento String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model agendas {
@@ -26,6 +31,7 @@ model agendas {
   observacao  String?
   dataColeta  DateTime       @default(now())
   desconto    Float          @default(0)
+  frete       Float          @default(0)
   valorTotal  Float          @default(0)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt

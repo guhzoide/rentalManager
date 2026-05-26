@@ -1,5 +1,5 @@
 export type ElementType = 'text' | 'grid' | 'separator' | 'fieldGroup';
-export type DbTableName = 'estoque' | 'clientes' | 'agendas' | 'transacoes';
+export type DbTableName = 'estoque' | 'clientes' | 'agendas' | 'transacoes' | 'empresas';
 export type DbData = Record<DbTableName, any[]>;
 
 export interface BaseElement {
@@ -47,6 +47,8 @@ export interface FieldGroupField {
     label: string;
     staticValue?: string;
     dbColumn?: string;
+    isCurrency?: boolean;
+    sumColumn?: string;
 }
 
 export interface FieldGroupElement extends BaseElement {
@@ -74,7 +76,7 @@ export interface KanvasDoc {
 }
 
 
-export const DB_TABLES: DbTableName[] = ['estoque', 'clientes', 'agendas', 'transacoes'];
+export const DB_TABLES: DbTableName[] = ['estoque', 'clientes', 'agendas', 'transacoes', 'empresas'];
 
 export function newId() {
     return Math.random().toString(36).slice(2, 10);
@@ -114,7 +116,7 @@ export function templateNotaFiscal(): KanvasDoc {
     doc.elements = [
         {
             id: newId(), type: 'text', x: 40, y: 30, width: 714, height: 40,
-            content: 'NOTA FISCAL DE SERVIÇO', fontSize: 22, fontWeight: 'bold',
+            content: 'NOTA FISCAL DE SERVIÇO DE LOCAÇÃO (NFS-e)', fontSize: 20, fontWeight: 'bold',
             align: 'center', color: '#0f172a',
         },
         {
@@ -122,43 +124,50 @@ export function templateNotaFiscal(): KanvasDoc {
             color: '#0f172a',
         },
         {
-            id: newId(), type: 'fieldGroup', x: 40, y: 90, width: 714, height: 90,
-            title: 'EMITENTE', titleBgColor: '#0f172a', borderColor: '#cbd5e1',
+            id: newId(), type: 'fieldGroup', x: 40, y: 90, width: 714, height: 110,
+            title: 'PRESTADOR DE SERVIÇO (EMITENTE)', titleBgColor: '#0f172a', borderColor: '#cbd5e1',
             fontSize: 12, labelBold: true, columns: 2,
+            dbTable: 'empresas',
             fields: [
-                { id: newId(), label: 'Razão Social', staticValue: 'LocaSystem Ltda.' },
-                { id: newId(), label: 'CNPJ', staticValue: '00.000.000/0001-00' },
-                { id: newId(), label: 'NF Nº', staticValue: '0001' },
-                { id: newId(), label: 'Data', staticValue: '__/__/____' },
+                { id: newId(), label: 'Razão Social', dbColumn: 'nome' },
+                { id: newId(), label: 'CNPJ', dbColumn: 'cnpj' },
+                { id: newId(), label: 'Telefone', dbColumn: 'telefone' },
+                { id: newId(), label: 'Rua', dbColumn: 'logradouro' },
+                { id: newId(), label: 'Número', dbColumn: 'numero' },
+                { id: newId(), label: 'Bairro', dbColumn: 'bairro' },
+                { id: newId(), label: 'CEP', dbColumn: 'cep' },
             ],
         },
         {
-            id: newId(), type: 'fieldGroup', x: 40, y: 190, width: 714, height: 110,
-            title: 'TOMADOR DO SERVIÇO', titleBgColor: '#0f172a', borderColor: '#cbd5e1',
+            id: newId(), type: 'fieldGroup', x: 40, y: 210, width: 714, height: 110,
+            title: 'TOMADOR DO SERVIÇO (CLIENTE)', titleBgColor: '#0f172a', borderColor: '#cbd5e1',
             fontSize: 12, labelBold: true, columns: 2,
             dbTable: 'clientes',
             fields: [
                 { id: newId(), label: 'Nome', dbColumn: 'nome' },
-                { id: newId(), label: 'CPF/CNPJ', dbColumn: 'cpfCnpj' },
-                { id: newId(), label: 'Endereço', dbColumn: 'endereco' },
-                { id: newId(), label: 'Telefone', dbColumn: 'telefone' },
-                { id: newId(), label: 'E-mail', dbColumn: 'email' },
+                { id: newId(), label: 'CPF/CNPJ', dbColumn: 'cpf' },
+                { id: newId(), label: 'Contato', dbColumn: 'contato' },
+                { id: newId(), label: 'Rua', dbColumn: 'rua' },
+                { id: newId(), label: 'Número', dbColumn: 'numero' },
+                { id: newId(), label: 'CEP', dbColumn: 'cep' },
             ],
         },
         {
-            id: newId(), type: 'grid', x: 40, y: 320, width: 714, height: 200,
+            id: newId(), type: 'grid', x: 40, y: 340, width: 714, height: 300,
             rows: 5, cols: 4,
             headers: ['Descrição', 'Qtd', 'Valor unit.', 'Total'],
             cells: Array.from({ length: 4 }, () => ['', '', '', '']),
+            dbTable: 'agendas',
+            headerBgColor: '#0f172a',
         },
         {
-            id: newId(), type: 'separator', x: 40, y: 540, width: 714, height: 1,
+            id: newId(), type: 'separator', x: 40, y: 650, width: 714, height: 1,
             color: '#cbd5e1',
         },
         {
-            id: newId(), type: 'text', x: 420, y: 560, width: 334, height: 30,
-            content: 'TOTAL: R$ 0,00', fontSize: 16, fontWeight: 'bold',
-            align: 'right', color: '#0f172a',
+            id: newId(), type: 'text', x: 40, y: 665, width: 714, height: 40,
+            content: 'OBSERVAÇÕES: Documento emitido para fins de controle de locação de bens e prestação de serviços. O valor total listado acima representa o montante consolidado do contrato de aluguel por período.', fontSize: 10, fontWeight: 'normal',
+            align: 'left', color: '#64748b',
         },
     ];
     return doc;
@@ -317,6 +326,7 @@ export function formatRecordLabel(table: string, r: any): string {
     if (!r) return '';
     if (table === 'estoque') return r.nome || r.id;
     if (table === 'clientes') return r.nome || r.id;
+    if (table === 'empresas') return r.nome || r.id;
     if (table === 'agendas') {
         const clientName = r.clientes?.nome || r.clienteId || 'Sem Nome';
         const dateStr = r.data ? new Date(r.data).toLocaleDateString('pt-BR') : '';

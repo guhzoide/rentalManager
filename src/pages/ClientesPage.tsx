@@ -7,6 +7,7 @@ import { ClientForm } from '@/components/forms/ClientForm';
 import { AddressForm } from '@/components/forms/AddressForm';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import type { ClienteInput } from '@/lib/schemas';
+import { getCep } from '@/utils/viacep';
 
 
 interface Cliente {
@@ -44,7 +45,7 @@ export function ClientesPage() {
         title: string;
         message: string;
         onConfirm: () => void;
-    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
     const triggerConfirm = (title: string, message: string, onConfirm: () => void) => {
         setConfirmModal({
@@ -68,7 +69,7 @@ export function ClientesPage() {
         { enabled: !!editing?.id }
     );
 
-    const additionalAddresses = (addressesData || []).filter(addr => addr.complemento !== 'Principal');
+    const additionalAddresses = (addressesData || []).filter((addr: any) => addr.complemento !== 'Principal');
 
     const createMutation = trpc.clientes.create.useMutation({
         onSuccess: () => { toast.success('Cliente cadastrado com sucesso!'); utils.clientes.list.invalidate(); setModalOpen(false); },
@@ -107,13 +108,17 @@ export function ClientesPage() {
         if (clean.length !== 8) return;
         setAddrCepLoading(true);
         try {
-            const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
-            const data = await res.json();
-            if (!data.erro) {
-                _setAddrViaCep({ cep, rua: data.logradouro || '', bairro: data.bairro || '' });
-                setAddressFormKey(k => k + 1);
+            const res = await getCep(clean);
+            if (!res?.success) {
+                toast.error('CEP não encontrado!');
+                return;
             }
-        } catch { /* silencioso */ }
+            const data = res.data;
+            _setAddrViaCep({ cep, rua: data.logradouro || '', bairro: data.bairro || '' });
+            setAddressFormKey(k => k + 1);
+        } catch (err) {
+            console.error("ViaCEP error: ", err);
+        }
         setAddrCepLoading(false);
     };
 

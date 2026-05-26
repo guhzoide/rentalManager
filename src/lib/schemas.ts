@@ -81,7 +81,24 @@ export const agendaSchema = z.object({
     observacao: z.string().optional(),
     itens: z.array(agendaItemSchema).min(1, 'Adicione pelo menos um item'),
     desconto: z.number().min(0).max(100).default(0),
+    frete: z.number().min(0).default(0),
     valorTotal: z.number().min(0).default(0),
 });
 
 export type AgendaInput = z.infer<typeof agendaSchema>;
+
+// ─── Empresa ──────────────────────────────────────────────────────────────────
+
+export const empresaSchema = z.object({
+    nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+    logoUrl: z.string().optional().nullable(),
+    cnpj: z.string().optional().nullable(),
+    telefone: z.string().optional().nullable(),
+    logradouro: z.string().optional().nullable(),
+    numero: z.string().optional().nullable(),
+    cep: z.string().optional().nullable(),
+    bairro: z.string().optional().nullable(),
+    complemento: z.string().optional().nullable(),
+});
+
+export type EmpresaInput = z.infer<typeof empresaSchema>;

@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { trpc, trpcClient } from '@/lib/trpc';
 
@@ -12,6 +12,7 @@ const AgendaPage = lazy(() => import('@/pages/AgendaPage').then(m => ({ default:
 const FinancePage = lazy(() => import('@/pages/FinancePage').then(m => ({ default: m.FinancePage })));
 const CatalogPage = lazy(() => import('@/pages/CatalogPage').then(m => ({ default: m.CatalogPage })));
 const CanvasPage = lazy(() => import('@/pages/CanvasPage').then(m => ({ default: m.CanvasPage })));
+const EmpresaPage = lazy(() => import('@/pages/EmpresaPage').then(m => ({ default: m.EmpresaPage })));
 
 import { useSession, signOut } from '@/lib/auth-client';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -60,6 +61,7 @@ const ALL_TABS: Record<string, Tab> = {
     usuarios: { id: 'usuarios', label: 'Usuários', icon: '👤' },
     financeiro: { id: 'financeiro', label: 'Financeiro', icon: '💵' },
     canvas: { id: 'canvas', label: 'Canvas', icon: '🖼️' },
+    empresa: { id: 'empresa', label: 'Empresa', icon: '🏢' },
 };
 
 const SIDEBAR_ITEMS = [
@@ -70,6 +72,7 @@ const SIDEBAR_ITEMS = [
     { id: 'usuarios', label: 'Usuários', icon: '👤' },
     { id: 'financeiro', label: 'Financeiro', icon: '💵' },
     { id: 'canvas', label: 'Canvas', icon: '🖼️' },
+    { id: 'empresa', label: 'Empresa', icon: '🏢' },
 ];
 
 function renderPage(id: string) {
@@ -80,6 +83,7 @@ function renderPage(id: string) {
         case 'agenda': return <AgendaPage />;
         case 'financeiro': return <FinancePage />;
         case 'canvas': return <CanvasPage />;
+        case 'empresa': return <EmpresaPage />;
         default: return null;
     }
 }
@@ -116,7 +120,10 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
         return () => window.removeEventListener('popstate', checkRoute);
     }, []);
 
-    const { data: empresaData, isLoading: isLoadingList } = trpc.empresa.list.useQuery({ id: "58f51956-983a-4046-b011-ca785ff41205" });
+    const { data: empresaData, isLoading: isLoadingList } = trpc.empresa.list.useQuery(
+        { id: "58f51956-983a-4046-b011-ca785ff41205" },
+        { enabled: !!session }
+    );
 
     if (isLoadingList) {
         return <PageLoader />;
@@ -297,7 +304,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                                 key={tab.id}
                                 style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
                             >
-                                <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <div style={{ flex: 1, overflowY: 'auto' }}>
                                     <Suspense fallback={<PageLoader />}>
                                         {renderPage(tab.id)}
                                     </Suspense>

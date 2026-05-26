@@ -47,6 +47,13 @@ const modules = [
         desc: 'Crie e gerencie documentos personalizados',
         color: 'rgba(99, 102, 241, 0.2)',
     },
+    {
+        id: 'empresa',
+        icon: '🏢',
+        title: 'Empresa',
+        desc: 'Configure os dados cadastrais e o logotipo',
+        color: 'rgba(168, 85, 247, 0.2)',
+    },
 ];
 
 export function MenuPage({ onNavigate }: MenuPageProps) {

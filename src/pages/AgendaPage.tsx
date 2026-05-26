@@ -21,6 +21,7 @@ interface AgendaItem {
     dataColeta: string;
     observacao?: string;
     desconto?: number;
+    frete?: number;
     valorTotal?: number;
     itens: { id: string; itemId: string; quantidade: number; estoques: { nome: string; valorDiaria?: number } }[];
     cliente: { id: string; nome: string };
@@ -79,6 +80,7 @@ export function AgendaPage() {
     const [dataStr, setDataStr] = useState('');
     const [dataColetaStr, setDataColetaStr] = useState('');
     const [desconto, setDesconto] = useState(0);
+    const [frete, setFrete] = useState(0);
 
     const [formMode, setFormMode] = useState<'view' | 'list' | 'new' | 'edit'>('view');
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -131,6 +133,7 @@ export function AgendaPage() {
             dataColeta: a.dataColeta,
             observacao: a.observacao || '',
             desconto: a.desconto ?? 0,
+            frete: a.frete ?? 0,
             valorTotal: a.valorTotal ?? 0,
             itens: a.itens || [],
             cliente: { id: a.clientes?.id, nome: a.clientes?.nome },
@@ -161,8 +164,8 @@ export function AgendaPage() {
 
         const totalBruto = itemsSum * diffDays;
         const discountFactor = (100 - desconto) / 100;
-        return totalBruto * discountFactor;
-    }, [selectedItens, dataStr, dataColetaStr, desconto, itens]);
+        return (totalBruto * discountFactor) + frete;
+    }, [selectedItens, dataStr, dataColetaStr, desconto, frete, itens]);
 
     // Mutations
     const saveMutation = trpc.agendas.create.useMutation({
@@ -241,6 +244,7 @@ export function AgendaPage() {
         setEnderecoId('');
         setObservacao('');
         setDesconto(0);
+        setFrete(0);
         if (selectedDate) {
             setDataStr(selectedDate.hour(8).minute(0).format('YYYY-MM-DDTHH:mm'));
             setDataColetaStr(selectedDate.hour(18).minute(0).format('YYYY-MM-DDTHH:mm'));
@@ -255,6 +259,7 @@ export function AgendaPage() {
         setEnderecoId(String(row.endereco.id));
         setObservacao(row.observacao || '');
         setDesconto(row.desconto ?? 0);
+        setFrete(row.frete ?? 0);
         setDataStr(dayjs(row.data).format('YYYY-MM-DDTHH:mm'));
         setDataColetaStr(dayjs(row.dataColeta).format('YYYY-MM-DDTHH:mm'));
         setFormMode('edit');
@@ -270,6 +275,7 @@ export function AgendaPage() {
             observacao,
             itens: selectedItens,
             desconto,
+            frete,
             valorTotal: valorTotalCalculado,
         });
 
@@ -301,6 +307,7 @@ export function AgendaPage() {
             observacao,
             itens: selectedItens,
             desconto,
+            frete,
             valorTotal: valorTotalCalculado,
         };
 
@@ -463,6 +470,8 @@ export function AgendaPage() {
                             setDataColeta={setDataColetaStr}
                             desconto={desconto}
                             setDesconto={setDesconto}
+                            frete={frete}
+                            setFrete={setFrete}
                             valorTotalCalculado={valorTotalCalculado}
                             itens={itens}
                             clientes={clientes}

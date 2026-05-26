@@ -3,6 +3,7 @@ import { ElementView } from '@/components/canvas/elementView';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { Modal } from '@/components/ui/Modal';
 import { PropertiesPanel } from '@/components/canvas/propertiesLabel';
 import { ToolbarButton, Divider, Field } from '@/components/canvas/canvasComponent';
 import { emptyDocument, templateNotaFiscal, templateOrdemServico, templateRecibo, newId } from '@/utils/canvasUtils';
@@ -50,6 +51,7 @@ export function CanvasPage() {
     const { data: clientesData } = trpc.clientes.list.useQuery({ limit: 1000 });
     const { data: agendasData } = trpc.agendas.list.useQuery({ limit: 1000 });
     const { data: transacoesData } = trpc.transacoes.list.useQuery({ limit: 1000 });
+    const { data: empresasRes } = trpc.empresa.listAll.useQuery();
     const { data: documentosList } = trpc.documentos.list.useQuery();
 
     const createDoc = trpc.documentos.create.useMutation({
@@ -68,10 +70,12 @@ export function CanvasPage() {
         clientes: clientesData?.data || [],
         agendas: agendasData?.data || [],
         transacoes: transacoesData?.data || [],
+        empresas: empresasRes || [],
     };
 
     const [activeDocId, setActiveDocId] = useState<string | null>(null);
     const [activeDoc, setActiveDoc] = useState<KanvasDoc>(() => emptyDocument('Documento 1'));
+    const [agendaModalOpen, setAgendaModalOpen] = useState(false);
 
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [zoom, setZoom] = useState(0.85);
@@ -89,6 +93,34 @@ export function CanvasPage() {
             setActiveDocId(doc.id);
             setSelectedId(null);
         }
+    };
+
+    const handleSelectAgendaForNf = (agendaId: string) => {
+        const agenda = agendasData?.data?.find((a: any) => String(a.id) === agendaId);
+        if (!agenda) return;
+
+        const doc = templateNotaFiscal();
+
+        const firstCompanyId = empresasRes?.[0]?.id;
+
+        doc.elements = doc.elements.map((el) => {
+            if (el.type === 'fieldGroup' && el.title?.includes('PRESTADOR')) {
+                return { ...el, dbRecordId: firstCompanyId };
+            }
+            if (el.type === 'fieldGroup' && el.title?.includes('TOMADOR')) {
+                return { ...el, dbRecordId: agenda.clienteId };
+            }
+            if (el.type === 'grid' && el.dbTable === 'agendas') {
+                return { ...el, selectedRecordIds: [agendaId] };
+            }
+            return el;
+        }) as KanvasElement[];
+
+        setActiveDoc(doc);
+        setActiveDocId(null);
+        setSelectedId(null);
+        setAgendaModalOpen(false);
+        toast.success('Template de Nota Fiscal criado e preenchido com sucesso!');
     };
 
     const handleSave = async () => {
@@ -297,7 +329,7 @@ export function CanvasPage() {
                 background: 'var(--bg-secondary)',
                 flexWrap: 'wrap',
             }}>
-                <strong style={{ marginRight: 8 }}>🖼️ Kanvas</strong>
+                <strong style={{ marginRight: 8 }}>🖼️ Canvas</strong>
 
                 <ToolbarButton onClick={() => addElement('text')}>＋ Texto</ToolbarButton>
                 <ToolbarButton onClick={() => addElement('grid')}>＋ Grid</ToolbarButton>
@@ -312,7 +344,11 @@ export function CanvasPage() {
                         if (!v) return;
                         let doc: KanvasDoc | null = null;
                         if (v === 'blank') doc = emptyDocument('Novo Documento');
-                        if (v === 'nf') doc = templateNotaFiscal();
+                        if (v === 'nf') {
+                            setAgendaModalOpen(true);
+                            e.target.value = '';
+                            return;
+                        }
                         if (v === 'recibo') doc = templateRecibo();
                         if (v === 'os') doc = templateOrdemServico();
                         if (doc) {
@@ -567,6 +603,90 @@ export function CanvasPage() {
                 confirmText="Emitir NF"
                 isDanger={false}
             />
+            {/* Modal de Seleção de Agendamento */}
+            <Modal
+                title="Faturar Agendamento (Nota Fiscal)"
+                open={agendaModalOpen}
+                onClose={() => setAgendaModalOpen(false)}
+                size="md"
+                content={
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
+                            Selecione abaixo o agendamento de origem. O sistema irá carregar os itens, calcular datas, frete e desconto, e auto-preencher os dados do cliente na Nota Fiscal.
+                        </p>
+                        <div style={{
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 8,
+                            paddingRight: 4,
+                            maxHeight: '40vh'
+                        }}>
+                            {(dbData.agendas || []).map((agenda: any) => {
+                                const clientName = agenda.clientes?.nome || 'Cliente Sem Nome';
+                                const dateStr = agenda.data ? new Date(agenda.data).toLocaleDateString('pt-BR') : '';
+                                const endStr = agenda.dataColeta ? new Date(agenda.dataColeta).toLocaleDateString('pt-BR') : '';
+                                const qtyItems = agenda.itens?.length || 0;
+                                const fmtTotal = agenda.valorTotal?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
+
+                                return (
+                                    <div
+                                        key={agenda.id}
+                                        onClick={() => handleSelectAgendaForNf(agenda.id)}
+                                        style={{
+                                            padding: '12px 16px',
+                                            borderRadius: 10,
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-primary)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            transition: 'all 0.2s',
+                                        }}
+                                        className="agenda-item-hover"
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <strong style={{ fontSize: 14, color: 'var(--text-primary)' }}>{clientName}</strong>
+                                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                                📅 Período: {dateStr} até {endStr} | 📦 {qtyItems} item(ns)
+                                            </span>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <strong style={{ fontSize: 14, color: 'var(--accent)' }}>{fmtTotal}</strong>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {(!dbData.agendas || dbData.agendas.length === 0) && (
+                                <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 13 }}>
+                                    Nenhum agendamento encontrado no banco de dados.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                }
+                footer={
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => setAgendaModalOpen(false)}
+                            style={{ padding: '8px 16px', borderRadius: 6 }}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                }
+            />
+            <style>{`
+                .agenda-item-hover:hover {
+                    border-color: var(--accent) !important;
+                    background-color: var(--accent-light) !important;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.1);
+                }
+            `}</style>
         </div>
     );
 }

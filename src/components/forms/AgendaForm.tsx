@@ -40,6 +40,8 @@ interface AgendaFormProps {
     setDataColeta: (val: string) => void;
     desconto: number;
     setDesconto: (val: number) => void;
+    frete: number;
+    setFrete: (val: number) => void;
     valorTotalCalculado: number;
     itens: SelectItem[];
     clientes: SelectItem[];
@@ -62,6 +64,8 @@ export function AgendaForm({
     setDataColeta,
     desconto,
     setDesconto,
+    frete,
+    setFrete,
     valorTotalCalculado,
     itens,
     clientes,
@@ -311,6 +315,27 @@ export function AgendaForm({
                             endAdornment: <InputAdornment position="end">%</InputAdornment>,
                         },
                         htmlInput: { min: 0, max: 100, step: 0.5 },
+                    }}
+                />
+            </div>
+
+            {/* ── Frete ── */}
+            <div>
+                <TextField
+                    label="Frete"
+                    type="number"
+                    variant="outlined"
+                    fullWidth
+                    value={frete}
+                    onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setFrete(isNaN(val) ? 0 : Math.max(0, val));
+                    }}
+                    slotProps={{
+                        input: {
+                            startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                        },
+                        htmlInput: { min: 0, step: 1 },
                     }}
                 />
             </div>

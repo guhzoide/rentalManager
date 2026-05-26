@@ -50,7 +50,6 @@ const loggerMiddleware = t.middleware(async (opts) => {
   const start = Date.now();
   const result = await opts.next();
   const duration = Date.now() - start;
-  console.log(`[${opts.type.toUpperCase()}] ${opts.path} — ${duration}ms`);
   return result;
 });
 
