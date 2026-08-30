@@ -1,9 +1,5 @@
 export type ElementType = 'text' | 'grid' | 'separator' | 'fieldGroup';
-<<<<<<< Updated upstream
 export type DbTableName = 'estoque' | 'clientes' | 'agendas' | 'transacoes' | 'empresas';
-=======
-export type DbTableName = 'estoque' | 'clientes' | 'agendas' | 'transacoes' | 'empresa';
->>>>>>> Stashed changes
 export type DbData = Record<DbTableName, any[]>;
 
 export interface BaseElement {
@@ -80,11 +76,7 @@ export interface KanvasDoc {
 }
 
 
-<<<<<<< Updated upstream
 export const DB_TABLES: DbTableName[] = ['estoque', 'clientes', 'agendas', 'transacoes', 'empresas'];
-=======
-export const DB_TABLES: DbTableName[] = ['estoque', 'clientes', 'agendas', 'transacoes', 'empresa'];
->>>>>>> Stashed changes
 
 export function newId() {
     return Math.random().toString(36).slice(2, 10);

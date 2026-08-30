@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 import { useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'react-toastify';
@@ -98,41 +97,10 @@ export function EmpresaPage() {
                     }} />
                     <p style={{ fontSize: '12px' }}>Carregando dados da empresa...</p>
                 </div>
-=======
-import { trpc } from '@/lib/trpc';
-import { EMPRESA_ID } from '@/lib/empresa';
-import { EmpresaForm } from '@/components/forms/EmpresaForm';
-import type { EmpresaInput } from '@/lib/schemas';
-import { toast } from 'react-toastify';
-
-export function EmpresaPage() {
-    const utils = trpc.useUtils();
-    const { data: empresa, isLoading } = trpc.empresa.list.useQuery({ id: EMPRESA_ID });
-    const updateMutation = trpc.empresa.update.useMutation({
-        onSuccess: () => {
-            toast.success('Dados da empresa atualizados!');
-            utils.empresa.list.invalidate({ id: EMPRESA_ID });
-        },
-        onError: (error) => toast.error(error.message),
-    });
-
-    const handleSubmit = (data: EmpresaInput) => {
-        updateMutation.mutate({ id: EMPRESA_ID, data });
-    };
-
-    if (isLoading) return <div className="loading-container">Carregando empresa...</div>;
-
-    if (!empresa) {
-        return (
-            <div className="page-inner">
-                <div className="page-header"><h2>🏢 Empresa</h2></div>
-                <p style={{ color: 'var(--danger)' }}>Empresa não encontrada. Esta tela permite somente editar o cadastro existente.</p>
->>>>>>> Stashed changes
             </div>
         );
     }
 
-<<<<<<< Updated upstream
     const isPending = updateMutation.isPending;
 
     return (
@@ -363,21 +331,6 @@ export function EmpresaPage() {
                         </button>
                     </div>
                 </form>
-=======
-    return (
-        <div className="page-inner">
-            <div className="page-header">
-                <h2>🏢 Empresa</h2>
-                <p>Edite os dados exibidos no sistema e no catálogo.</p>
-            </div>
-            <div className="card" style={{ maxWidth: 720, padding: 24 }}>
-                <EmpresaForm defaultValues={empresa} onSubmit={handleSubmit} />
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
-                    <button className="btn btn-primary" type="submit" form="empresa-form" disabled={updateMutation.isPending}>
-                        {updateMutation.isPending ? 'Salvando...' : '💾 Salvar alterações'}
-                    </button>
-                </div>
->>>>>>> Stashed changes
             </div>
         </div>
     );

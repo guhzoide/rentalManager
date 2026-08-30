@@ -36,6 +36,7 @@ export function FinancePage() {
     const [selectedMonth, setSelectedMonth] = useState(today.month());
     const [selectedYear, setSelectedYear] = useState(String(today.year()));
     const [isMobileFormOpen, setIsMobileFormOpen] = useState(false);
+    const [activeSubTab, setActiveSubTab] = useState<'movements' | 'analytics'>('movements');
 
     const utils = trpc.useUtils();
 

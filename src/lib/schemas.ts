@@ -91,7 +91,6 @@ export const agendaSchema = z.object({
 
 export type AgendaInput = z.infer<typeof agendaSchema>;
 
-<<<<<<< Updated upstream
 // ─── Empresa ──────────────────────────────────────────────────────────────────
 
 export const empresaSchema = z.object({
@@ -104,15 +103,6 @@ export const empresaSchema = z.object({
     cep: z.string().optional().nullable(),
     bairro: z.string().optional().nullable(),
     complemento: z.string().optional().nullable(),
-=======
-// ─── Empresa ─────────────────────────────────────────────────────────────────
-
-export const empresaSchema = z.object({
-    nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-    logoUrl: z.string().url('Informe uma URL de imagem válida').optional().or(z.literal('')),
-    cnpj: z.string().optional().nullable(),
-    telefone: z.string().optional().nullable(),
->>>>>>> Stashed changes
 });
 
 export type EmpresaInput = z.infer<typeof empresaSchema>;
