@@ -78,12 +78,16 @@ export const LOGIN_STYLES = `
         display: flex;
         align-items: center;
         justify-content: center;
+        height: 100vh;
+        height: 100dvh;
         min-height: 100vh;
-        width: 100vw;
+        min-height: 100dvh;
+        width: 100%;
         padding: 24px;
         box-sizing: border-box;
         position: relative;
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
         background: var(--bg-primary);
     }
 
@@ -195,8 +199,8 @@ export const LOGIN_STYLES = `
     }
 
     .login-logo-icon {
-        width: 56px;
-        height: 56px;
+        width: 86px;
+        height: 86px;
         background: linear-gradient(135deg, #60a5fa, #8b5cf6);
         border-radius: 16px;
         display: flex;
@@ -236,10 +240,6 @@ export const LOGIN_STYLES = `
         flex-direction: column;
         gap: 6px;
     }
-
-    .login-field:nth-child(1) { animation: login-field-in 0.45s ease 0.5s both; }
-    .login-field:nth-child(2) { animation: login-field-in 0.45s ease 0.6s both; }
-    .login-field:nth-child(3) { animation: login-field-in 0.45s ease 0.7s both; }
 
     .login-label {
         font-size: 11.5px;
@@ -394,4 +394,38 @@ export const LOGIN_STYLES = `
     }
     .login-dot:nth-child(2) { animation-delay: 0.15s; }
     .login-dot:nth-child(3) { animation-delay: 0.30s; }
+
+    @media (max-width: 480px) {
+        .login-root {
+            min-height: 100dvh;
+            padding: 16px;
+            align-items: flex-start;
+            overflow-y: auto;
+        }
+
+        .login-card {
+            margin: auto 0;
+            padding: 32px 24px 28px;
+            border-radius: 16px;
+            gap: 20px;
+        }
+
+        .login-logo-icon {
+            width: 68px;
+            height: 68px;
+        }
+
+        .login-logo-title {
+            font-size: 20px;
+        }
+
+        .login-logo-sub,
+        .login-btn {
+            font-size: 16px;
+        }
+
+        .login-btn {
+            height: 48px;
+        }
+    }
 `;

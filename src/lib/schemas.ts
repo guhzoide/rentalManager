@@ -26,6 +26,7 @@ export type UsuarioUpdateInput = z.infer<typeof usuarioUpdateSchema>;
 export const clienteSchema = z.object({
     nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
     cpf: z.string().optional().nullable(),
+    email: z.string().email('E-mail inválido'),
     cep: z.string().optional().nullable(),
     bairro: z.string().optional().nullable(),
     rua: z.string().optional().nullable(),
@@ -62,6 +63,8 @@ export const estoqueSchema = z.object({
     quantidade: z.number({ error: 'Informe um número válido' }).int('Deve ser inteiro').min(0, 'Quantidade não pode ser negativa'),
     disponivel: z.number({ error: 'Informe um número válido' }).int('Deve ser inteiro').min(0, 'Quantidade não pode ser negativa'),
     ativo: z.boolean(),
+    imageUrl: z.string().url('Informe uma URL de imagem válida').optional().or(z.literal('')),
+    imageUrls: z.array(z.string().url('Informe uma URL de imagem válida').or(z.literal(''))).default([]),
 });
 
 export type EstoqueInput = z.infer<typeof estoqueSchema>;
@@ -81,7 +84,35 @@ export const agendaSchema = z.object({
     observacao: z.string().optional(),
     itens: z.array(agendaItemSchema).min(1, 'Adicione pelo menos um item'),
     desconto: z.number().min(0).max(100).default(0),
+    frete: z.number().min(0).default(0),
     valorTotal: z.number().min(0).default(0),
+    concluida: z.boolean().default(false),
 });
 
 export type AgendaInput = z.infer<typeof agendaSchema>;
+
+<<<<<<< Updated upstream
+// ─── Empresa ──────────────────────────────────────────────────────────────────
+
+export const empresaSchema = z.object({
+    nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+    logoUrl: z.string().optional().nullable(),
+    cnpj: z.string().optional().nullable(),
+    telefone: z.string().optional().nullable(),
+    logradouro: z.string().optional().nullable(),
+    numero: z.string().optional().nullable(),
+    cep: z.string().optional().nullable(),
+    bairro: z.string().optional().nullable(),
+    complemento: z.string().optional().nullable(),
+=======
+// ─── Empresa ─────────────────────────────────────────────────────────────────
+
+export const empresaSchema = z.object({
+    nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+    logoUrl: z.string().url('Informe uma URL de imagem válida').optional().or(z.literal('')),
+    cnpj: z.string().optional().nullable(),
+    telefone: z.string().optional().nullable(),
+>>>>>>> Stashed changes
+});
+
+export type EmpresaInput = z.infer<typeof empresaSchema>;

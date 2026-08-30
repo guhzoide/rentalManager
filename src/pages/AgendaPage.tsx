@@ -21,7 +21,9 @@ interface AgendaItem {
     dataColeta: string;
     observacao?: string;
     desconto?: number;
+    frete?: number;
     valorTotal?: number;
+    concluida: boolean;
     itens: { id: string; itemId: string; quantidade: number; estoques: { nome: string; valorDiaria?: number } }[];
     cliente: { id: string; nome: string };
     endereco: { id: string; rua: string; numero: string; cep: string };
@@ -36,7 +38,8 @@ const MONTHS = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-const agendaColumns: Column<AgendaItem>[] = [
+function getAgendaColumns(onCompletionChange: (agenda: AgendaItem, concluida: boolean) => void): Column<AgendaItem>[] {
+    return [
     {
         key: 'itens',
         label: 'Itens Locados',
@@ -61,7 +64,25 @@ const agendaColumns: Column<AgendaItem>[] = [
         }
     },
     { key: 'observacao', label: 'Observações', render: (_, row) => row.observacao || '—' },
+    {
+        key: 'concluida',
+        label: 'Concluída',
+        width: '110px',
+        render: (_, row) => (
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} onClick={(event) => event.stopPropagation()}>
+                <input
+                    type="checkbox"
+                    role="switch"
+                    checked={row.concluida}
+                    onKeyDown={(event) => event.stopPropagation()}
+                    onChange={(event) => onCompletionChange(row, event.target.checked)}
+                />
+                <span>{row.concluida ? 'Sim' : 'Não'}</span>
+            </label>
+        ),
+    },
 ];
+}
 
 export function AgendaPage() {
     const today = dayjs();
@@ -79,6 +100,7 @@ export function AgendaPage() {
     const [dataStr, setDataStr] = useState('');
     const [dataColetaStr, setDataColetaStr] = useState('');
     const [desconto, setDesconto] = useState(0);
+    const [frete, setFrete] = useState(0);
 
     const [formMode, setFormMode] = useState<'view' | 'list' | 'new' | 'edit'>('view');
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -131,7 +153,9 @@ export function AgendaPage() {
             dataColeta: a.dataColeta,
             observacao: a.observacao || '',
             desconto: a.desconto ?? 0,
+            frete: a.frete ?? 0,
             valorTotal: a.valorTotal ?? 0,
+            concluida: a.concluida ?? false,
             itens: a.itens || [],
             cliente: { id: a.clientes?.id, nome: a.clientes?.nome },
             endereco: { id: a.enderecos?.id, rua: a.enderecos?.rua, numero: a.enderecos?.numero, cep: a.enderecos?.cep }
@@ -161,8 +185,8 @@ export function AgendaPage() {
 
         const totalBruto = itemsSum * diffDays;
         const discountFactor = (100 - desconto) / 100;
-        return totalBruto * discountFactor;
-    }, [selectedItens, dataStr, dataColetaStr, desconto, itens]);
+        return (totalBruto * discountFactor) + frete;
+    }, [selectedItens, dataStr, dataColetaStr, desconto, frete, itens]);
 
     // Mutations
     const saveMutation = trpc.agendas.create.useMutation({
@@ -185,6 +209,15 @@ export function AgendaPage() {
         onError: (err) => toast.error(`Erro: ${err.message}`, { theme: 'colored' }),
     });
 
+    const completionMutation = trpc.agendas.update.useMutation({
+        onSuccess: () => {
+            toast.success('Status da locação atualizado!', { theme: 'colored' });
+            utils.agendas.list.invalidate();
+            utils.estoque.list.invalidate();
+        },
+        onError: (err) => toast.error(`Erro: ${err.message}`, { theme: 'colored' }),
+    });
+
     const deleteMutation = trpc.agendas.delete.useMutation({
         onSuccess: () => {
             setSelectedAgenda(null);
@@ -194,6 +227,11 @@ export function AgendaPage() {
         },
         onError: (err) => toast.error(`Erro: ${err.message}`, { theme: 'colored' }),
     });
+
+    const agendaColumns = useMemo(
+        () => getAgendaColumns((agenda, concluida) => completionMutation.mutate({ id: agenda.id, data: { concluida } })),
+        [completionMutation],
+    );
 
     // Filtra endereços pelo cliente selecionado
     const filteredEnderecos = useMemo(() => {
@@ -234,6 +272,22 @@ export function AgendaPage() {
         setFormMode('list');
     };
 
+    const changeCalendarMonth = (nextMonth: dayjs.Dayjs) => {
+        const monthStart = nextMonth.startOf('month');
+        setCurrent(monthStart);
+        setSelectedDate((date) => date
+            ? monthStart.date(Math.min(date.date(), monthStart.daysInMonth()))
+            : null);
+    };
+
+    const handleDateSelection = (value: string) => {
+        if (!value) return;
+        const date = dayjs(value);
+        setCurrent(date.startOf('month'));
+        setSelectedDate(date);
+        setFormMode('list');
+    };
+
     const handleAddClick = () => {
         setSelectedAgenda(null);
         setSelectedItens([{ itemId: '', quantidade: 1 }]);
@@ -241,6 +295,7 @@ export function AgendaPage() {
         setEnderecoId('');
         setObservacao('');
         setDesconto(0);
+        setFrete(0);
         if (selectedDate) {
             setDataStr(selectedDate.hour(8).minute(0).format('YYYY-MM-DDTHH:mm'));
             setDataColetaStr(selectedDate.hour(18).minute(0).format('YYYY-MM-DDTHH:mm'));
@@ -255,6 +310,7 @@ export function AgendaPage() {
         setEnderecoId(String(row.endereco.id));
         setObservacao(row.observacao || '');
         setDesconto(row.desconto ?? 0);
+        setFrete(row.frete ?? 0);
         setDataStr(dayjs(row.data).format('YYYY-MM-DDTHH:mm'));
         setDataColetaStr(dayjs(row.dataColeta).format('YYYY-MM-DDTHH:mm'));
         setFormMode('edit');
@@ -270,6 +326,7 @@ export function AgendaPage() {
             observacao,
             itens: selectedItens,
             desconto,
+            frete,
             valorTotal: valorTotalCalculado,
         });
 
@@ -301,6 +358,7 @@ export function AgendaPage() {
             observacao,
             itens: selectedItens,
             desconto,
+            frete,
             valorTotal: valorTotalCalculado,
         };
 
@@ -312,6 +370,7 @@ export function AgendaPage() {
     };
 
     const days = buildCalendarDays();
+    const yearOptions = Array.from({ length: 11 }, (_, index) => today.year() - 5 + index);
 
     return (
         <div className="page-inner">
@@ -326,18 +385,49 @@ export function AgendaPage() {
                     <div className="calendar-header">
                         <button
                             className="btn btn-ghost btn-sm btn-icon"
-                            onClick={() => setCurrent(current.subtract(1, 'month'))}
+                            onClick={() => changeCalendarMonth(current.subtract(1, 'month'))}
                         >
                             ‹
                         </button>
-                        <span className="calendar-month-title">
-                            {MONTHS[current.month()]} {current.year()}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <select
+                                className="form-control"
+                                aria-label="Mês da agenda"
+                                value={current.month()}
+                                onChange={(event) => changeCalendarMonth(current.month(Number(event.target.value)))}
+                                style={{ width: 118, margin: 0, padding: '5px 7px' }}
+                            >
+                                {MONTHS.map((month, index) => <option key={month} value={index}>{month}</option>)}
+                            </select>
+                            <select
+                                className="form-control"
+                                aria-label="Ano da agenda"
+                                value={current.year()}
+                                onChange={(event) => changeCalendarMonth(current.year(Number(event.target.value)))}
+                                style={{ width: 78, margin: 0, padding: '5px 7px' }}
+                            >
+                                {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
+                            </select>
+                        </div>
                         <button
                             className="btn btn-ghost btn-sm btn-icon"
-                            onClick={() => setCurrent(current.add(1, 'month'))}
+                            onClick={() => changeCalendarMonth(current.add(1, 'month'))}
                         >
                             ›
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, padding: '0 12px 12px' }}>
+                        <input
+                            className="form-control"
+                            type="date"
+                            aria-label="Selecionar dia da agenda"
+                            value={selectedDate?.format('YYYY-MM-DD') ?? ''}
+                            onChange={(event) => handleDateSelection(event.target.value)}
+                            style={{ margin: 0, flex: 1 }}
+                        />
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleDateSelection(today.format('YYYY-MM-DD'))}>
+                            Hoje
                         </button>
                     </div>
 
@@ -463,6 +553,8 @@ export function AgendaPage() {
                             setDataColeta={setDataColetaStr}
                             desconto={desconto}
                             setDesconto={setDesconto}
+                            frete={frete}
+                            setFrete={setFrete}
                             valorTotalCalculado={valorTotalCalculado}
                             itens={itens}
                             clientes={clientes}

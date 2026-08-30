@@ -29,7 +29,7 @@ const addressColumns: Column<Endereco>[] = [
 ];
 
 interface ClientFormProps {
-    defaultValues?: Partial<ClienteInput>;
+    cliente?: ClientFormRecord | null;
     editingId?: string;
     additionalAddresses: Endereco[];
     isLoadingAddresses: boolean;
@@ -38,8 +38,25 @@ interface ClientFormProps {
     onSubmit: (data: ClienteInput) => void;
 }
 
+export type ClientFormRecord = Partial<ClienteInput> & { id?: string };
+
+function getFormValues(cliente?: ClientFormRecord | null): ClienteInput {
+    return {
+        nome: cliente?.nome ?? '',
+        email: cliente?.email ?? '',
+        cpf: cliente?.cpf ?? '',
+        contato: cliente?.contato ?? '',
+        cep: cliente?.cep ?? '',
+        bairro: cliente?.bairro ?? '',
+        rua: cliente?.rua ?? '',
+        numero: cliente?.numero ?? '',
+        complemento: cliente?.complemento ?? '',
+        principal: cliente?.principal ?? true,
+    };
+}
+
 export function ClientForm({
-    defaultValues,
+    cliente,
     editingId,
     additionalAddresses,
     isLoadingAddresses,
@@ -54,25 +71,16 @@ export function ClientForm({
         formState: { errors },
     } = useForm<ClienteInput>({
         resolver: zodResolver(clienteSchema),
-        defaultValues: {
-            nome: '',
-            cpf: '',
-            contato: '',
-            ...defaultValues,
-        },
+        defaultValues: getFormValues(cliente),
     });
 
     useEffect(() => {
-        reset({ nome: '', cpf: '', contato: '', ...defaultValues });
-    }, [JSON.stringify(defaultValues)]);
+        reset(getFormValues(cliente));
+    }, [cliente, reset]);
 
     return (
         <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
             <div style={{ flex: 1 }}>
-                {/* 
-                  CORREÇÃO: O <form> agora envolve APENAS os campos de input,
-                  isolando o DataGrid e seus botões internos.
-                */}
                 <form id="client-form" onSubmit={handleSubmit(onSubmit)} noValidate>
                     <div className="form-grid">
                         <div className="form-group">
@@ -88,6 +96,24 @@ export function ClientForm({
                                         placeholder="Nome completo"
                                         error={!!errors.nome}
                                         helperText={errors.nome?.message}
+                                    />
+                                )}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <Controller
+                                name="email"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        label="E-mail *"
+                                        variant="outlined"
+                                        fullWidth
+                                        placeholder="email@exemplo.com"
+                                        error={!!errors.email}
+                                        helperText={errors.email?.message}
                                     />
                                 )}
                             />
@@ -112,7 +138,7 @@ export function ClientForm({
                             />
                         </div>
 
-                        <div className="form-group full">
+                        <div className="form-group">
                             <Controller
                                 name="contato"
                                 control={control}

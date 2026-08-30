@@ -26,6 +26,8 @@ export const estoqueRouter = router({
       return prisma.estoques.create({
         data: {
           ...input,
+          imageUrl: input.imageUrl || null,
+          imageUrls: input.imageUrls.filter(Boolean),
           updatedAt: new Date(),
         },
       });
@@ -41,6 +43,8 @@ export const estoqueRouter = router({
         where: { id: input.id },
         data: {
           ...input.data,
+          ...(input.data.imageUrl !== undefined ? { imageUrl: input.data.imageUrl || null } : {}),
+          ...(input.data.imageUrls !== undefined ? { imageUrls: input.data.imageUrls.filter(Boolean) } : {}),
           updatedAt: new Date(),
         },
       });

@@ -4,12 +4,13 @@ interface ModalProps {
   title: string;
   open: boolean;
   onClose: () => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  content?: React.ReactNode;
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function Modal({ title, open, onClose, children, footer, size = 'md' }: ModalProps) {
+export function Modal({ title, open, onClose, children, content, footer, size = 'md' }: ModalProps) {
   // Fechar com ESC
   useEffect(() => {
     if (!open) return;
@@ -37,7 +38,7 @@ export function Modal({ title, open, onClose, children, footer, size = 'md' }: M
           </button>
         </div>
 
-        <div className="modal-body">{children}</div>
+        <div className="modal-body">{content || children}</div>
 
         {footer && <div className="modal-footer">{footer}</div>}
       </div>

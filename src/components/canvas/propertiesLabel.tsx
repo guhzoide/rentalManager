@@ -465,6 +465,35 @@ export function PropertiesPanel({
                                                 style={{ ...inputStyle, fontSize: 11, marginTop: 4 }}
                                             />
                                         )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={f.isCurrency ?? false}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        update({
+                                                            isCurrency: checked,
+                                                            sumColumn: checked ? f.sumColumn : undefined
+                                                        });
+                                                    }}
+                                                />
+                                                Valor é moeda
+                                            </label>
+                                        </div>
+                                        {f.isCurrency && el.dbTable && (
+                                            <div style={{ marginTop: 4 }}>
+                                                <span style={{ fontSize: 10, opacity: 0.7, display: 'block', marginBottom: 2 }}>Somar coluna para total:</span>
+                                                <select
+                                                    value={f.sumColumn ?? ''}
+                                                    onChange={(e) => update({ sumColumn: e.target.value || undefined })}
+                                                    style={{ ...inputStyle, fontSize: 11 }}
+                                                >
+                                                    <option value="">— somar coluna (opcional) —</option>
+                                                    {cols.map((c) => <option key={c} value={c}>{c}</option>)}
+                                                </select>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}

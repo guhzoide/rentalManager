@@ -20,11 +20,12 @@ export const clienteRouter = router({
 
       // Map each client to include primary address fields for grid compatibility
       const mappedData = result.data.map((c: any) => {
-        const primary = c.enderecos?.find((e: any) => e.complemento === 'Principal');
+        const primary = c.enderecos?.find((e: any) => e.principal === true) || c.enderecos?.[0];
         return {
           id: c.id,
           nome: c.nome,
           cpf: c.cpf,
+          email: c.email,
           contato: c.contato,
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,

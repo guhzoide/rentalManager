@@ -9,13 +9,18 @@ datasource db {
 }
 
 model empresas {
-  id        String    @id @default(uuid()) @map("_id")
-  nome      String
-  logoUrl   String?
-  cnpj      String?
-  telefone  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(uuid()) @map("_id")
+  nome        String
+  logoUrl     String?
+  cnpj        String?
+  telefone    String?
+  logradouro  String?
+  numero      String?
+  cep         String?
+  bairro      String?
+  complemento String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model agendas {
@@ -26,7 +31,9 @@ model agendas {
   observacao  String?
   dataColeta  DateTime       @default(now())
   desconto    Float          @default(0)
+  frete       Float          @default(0)
   valorTotal  Float          @default(0)
+  concluida   Boolean        @default(false)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   clientes    clientes       @relation(fields: [clienteId], references: [id])
@@ -50,6 +57,7 @@ model clientes {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   cpf       String?
+  email     String?
   agendas   agendas[]
   enderecos enderecos[]
 }
@@ -77,6 +85,7 @@ model estoques {
   altura      Float
   valorDiaria Float
   imageUrl    String?
+  imageUrls   String[]       @default([])
   ativo       Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -157,6 +166,14 @@ model transacoes {
   valor     Float
   tipo      String
   data      DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model documentos {
+  id        String   @id @default(uuid()) @map("_id")
+  nome      String
+  content   Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

@@ -1,11 +1,15 @@
 import { trpc } from '@/lib/trpc';
 import { ElementView } from '@/components/canvas/elementView';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { Modal } from '@/components/ui/Modal';
 import { PropertiesPanel } from '@/components/canvas/propertiesLabel';
 import { ToolbarButton, Divider, Field } from '@/components/canvas/canvasComponent';
 import { emptyDocument, templateNotaFiscal, templateOrdemServico, templateRecibo, newId } from '@/utils/canvasUtils';
+import { EMPRESA_ID } from '@/lib/empresa';
 
-import type { KanvasDoc, KanvasElement, ElementType } from '@/utils/canvasUtils';
+import type { DbData, KanvasDoc, KanvasElement, ElementType } from '@/utils/canvasUtils';
 
 const GRID_SIZE = 10;
 const snap = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE;
@@ -43,58 +47,147 @@ interface DragState {
 }
 
 export function CanvasPage() {
+    const utils = trpc.useUtils();
     const { data: estoqueData } = trpc.estoque.list.useQuery({ limit: 1000 });
     const { data: clientesData } = trpc.clientes.list.useQuery({ limit: 1000 });
     const { data: agendasData } = trpc.agendas.list.useQuery({ limit: 1000 });
     const { data: transacoesData } = trpc.transacoes.list.useQuery({ limit: 1000 });
+<<<<<<< Updated upstream
+    const { data: empresasRes } = trpc.empresa.listAll.useQuery();
+    const { data: documentosList } = trpc.documentos.list.useQuery();
 
-    const dbData = {
+    const createDoc = trpc.documentos.create.useMutation({
+        onSuccess: () => utils.documentos.list.invalidate(),
+    });
+    const updateDocMutation = trpc.documentos.update.useMutation({
+        onSuccess: () => utils.documentos.list.invalidate(),
+    });
+    const deleteDoc = trpc.documentos.delete.useMutation({
+        onSuccess: () => utils.documentos.list.invalidate(),
+    });
+    const emitirNf = trpc.documentos.emitirNf.useMutation();
+=======
+    const { data: empresaData } = trpc.empresa.list.useQuery({ id: EMPRESA_ID });
+>>>>>>> Stashed changes
+
+    const dbData: DbData = {
         estoque: estoqueData?.data || [],
         clientes: clientesData?.data || [],
         agendas: agendasData?.data || [],
         transacoes: transacoesData?.data || [],
+<<<<<<< Updated upstream
+        empresas: empresasRes || [],
+=======
+        empresa: empresaData ? [empresaData] : [],
+>>>>>>> Stashed changes
     };
 
-    const [documents, setDocuments] = useState<KanvasDoc[]>(() => [emptyDocument('Documento 1')]);
-    const [activeDocId, setActiveDocId] = useState<string>(documents[0].id);
+    const [activeDocId, setActiveDocId] = useState<string | null>(null);
+    const [activeDoc, setActiveDoc] = useState<KanvasDoc>(() => emptyDocument('Documento 1'));
+    const [agendaModalOpen, setAgendaModalOpen] = useState(false);
+
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [zoom, setZoom] = useState(0.85);
     const [showGrid, setShowGrid] = useState(false);
     const [isMobilePropsOpen, setIsMobilePropsOpen] = useState(false);
+    const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
+    const [confirmEmitId, setConfirmEmitId] = useState<string | null>(null);
     const dragRef = useRef<DragState | null>(null);
     const editingTextRef = useRef<string | null>(null);
 
-    const activeDoc = documents.find((d) => d.id === activeDocId) ?? documents[0];
+    const loadDocument = async (id: string) => {
+        const doc = await utils.documentos.get.fetch({ id });
+        if (doc && doc.content) {
+            setActiveDoc(doc.content as unknown as KanvasDoc);
+            setActiveDocId(doc.id);
+            setSelectedId(null);
+        }
+    };
+
+    const handleSelectAgendaForNf = (agendaId: string) => {
+        const agenda = agendasData?.data?.find((a: any) => String(a.id) === agendaId);
+        if (!agenda) return;
+
+        const doc = templateNotaFiscal();
+
+        const firstCompanyId = empresasRes?.[0]?.id;
+
+        doc.elements = doc.elements.map((el) => {
+            if (el.type === 'fieldGroup' && el.title?.includes('PRESTADOR')) {
+                return { ...el, dbRecordId: firstCompanyId };
+            }
+            if (el.type === 'fieldGroup' && el.title?.includes('TOMADOR')) {
+                return { ...el, dbRecordId: agenda.clienteId };
+            }
+            if (el.type === 'grid' && el.dbTable === 'agendas') {
+                return { ...el, selectedRecordIds: [agendaId] };
+            }
+            return el;
+        }) as KanvasElement[];
+
+        setActiveDoc(doc);
+        setActiveDocId(null);
+        setSelectedId(null);
+        setAgendaModalOpen(false);
+        toast.success('Template de Nota Fiscal criado e preenchido com sucesso!');
+    };
+
+    const handleSave = async () => {
+        if (activeDocId) {
+            await updateDocMutation.mutateAsync({ id: activeDocId, nome: activeDoc.name, content: activeDoc });
+            toast.success('Documento atualizado com sucesso!');
+        } else {
+            const res = await createDoc.mutateAsync({ nome: activeDoc.name, content: activeDoc });
+            setActiveDocId(res.id);
+            toast.success('Documento salvo com sucesso!');
+        }
+    };
+
+    const handleDeleteDoc = (id: string) => {
+        setDeleteDocId(id);
+    };
+
+    const confirmDeleteDoc = async () => {
+        if (!deleteDocId) return;
+        await deleteDoc.mutateAsync({ id: deleteDocId });
+        if (activeDocId === deleteDocId) {
+            setActiveDoc(emptyDocument('Novo Documento'));
+            setActiveDocId(null);
+        }
+        setDeleteDocId(null);
+        toast.success('Documento excluído com sucesso!');
+    };
+
+    const confirmEmitirNf = async () => {
+        if (!confirmEmitId) return;
+        const toastId = toast.loading('Processando emissão da Nota Fiscal...');
+        try {
+            const res = await emitirNf.mutateAsync({ id: confirmEmitId });
+            toast.update(toastId, { render: res.message, type: 'success', isLoading: false, autoClose: 4000 });
+        } catch (e: any) {
+            toast.update(toastId, { render: e.message || 'Erro ao emitir NF', type: 'error', isLoading: false, autoClose: 4000 });
+        }
+        setConfirmEmitId(null);
+    };
 
     const updateDoc = useCallback((patch: Partial<KanvasDoc>) => {
-        setDocuments((prev) => prev.map((d) => (d.id === activeDoc.id ? { ...d, ...patch } : d)));
-    }, [activeDoc.id]);
+        setActiveDoc((prev) => ({ ...prev, ...patch }));
+    }, []);
 
     const updateElement = useCallback((id: string, patch: Partial<KanvasElement>) => {
-        setDocuments((prev) =>
-            prev.map((d) =>
-                d.id === activeDoc.id
-                    ? {
-                        ...d,
-                        elements: d.elements.map((el: any) =>
-                            el.id === id ? ({ ...el, ...patch } as KanvasElement) : el,
-                        ),
-                    }
-                    : d,
-            ),
-        );
-    }, [activeDoc.id]);
+        setActiveDoc((prev) => ({
+            ...prev,
+            elements: prev.elements.map((el) => (el.id === id ? { ...el, ...patch } as KanvasElement : el))
+        }));
+    }, []);
 
     const deleteElement = useCallback((id: string) => {
-        setDocuments((prev) =>
-            prev.map((d) =>
-                d.id === activeDoc.id
-                    ? { ...d, elements: d.elements.filter((el) => el.id !== id) }
-                    : d,
-            ),
-        );
+        setActiveDoc((prev) => ({
+            ...prev,
+            elements: prev.elements.filter((el) => el.id !== id)
+        }));
         setSelectedId(null);
-    }, [activeDoc.id]);
+    }, []);
 
     const addElement = useCallback((type: ElementType) => {
         let el: KanvasElement;
@@ -129,13 +222,9 @@ export function CanvasPage() {
                 ],
             };
         }
-        setDocuments((prev) =>
-            prev.map((d) =>
-                d.id === activeDoc.id ? { ...d, elements: [...d.elements, el] } : d,
-            ),
-        );
+        setActiveDoc((prev) => ({ ...prev, elements: [...prev.elements, el] }));
         setSelectedId(el.id);
-    }, [activeDoc]);
+    }, [activeDoc.elements.length]);
 
     const onMouseDownElement = (e: React.MouseEvent, id: string, mode: 'move' | 'resize') => {
         if (editingTextRef.current) return;
@@ -240,7 +329,7 @@ export function CanvasPage() {
             color: 'var(--text-primary)',
         }}>
             {/* Toolbar */}
-            <div style={{
+            <div className="kanvas-toolbar" style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
@@ -249,7 +338,7 @@ export function CanvasPage() {
                 background: 'var(--bg-secondary)',
                 flexWrap: 'wrap',
             }}>
-                <strong style={{ marginRight: 8 }}>🖼️ Kanvas</strong>
+                <strong style={{ marginRight: 8 }}>🖼️ Canvas</strong>
 
                 <ToolbarButton onClick={() => addElement('text')}>＋ Texto</ToolbarButton>
                 <ToolbarButton onClick={() => addElement('grid')}>＋ Grid</ToolbarButton>
@@ -263,22 +352,25 @@ export function CanvasPage() {
                         const v = e.target.value;
                         if (!v) return;
                         let doc: KanvasDoc | null = null;
-                        if (v === 'blank') doc = emptyDocument(`Documento ${documents.length + 1}`);
-                        if (v === 'nf') doc = templateNotaFiscal();
+                        if (v === 'blank') doc = emptyDocument('Novo Documento');
+                        if (v === 'nf') {
+                            setAgendaModalOpen(true);
+                            e.target.value = '';
+                            return;
+                        }
                         if (v === 'recibo') doc = templateRecibo();
                         if (v === 'os') doc = templateOrdemServico();
                         if (doc) {
-                            const created = doc;
-                            setDocuments((p) => [...p, created]);
-                            setActiveDocId(created.id);
+                            setActiveDoc(doc);
+                            setActiveDocId(null);
                             setSelectedId(null);
                         }
                         e.target.value = '';
                     }}
-                    defaultValue=""
+                    value=""
                     style={selectStyle}
                 >
-                    <option value="" disabled>Novo documento</option>
+                    <option value="" disabled>Novo documento...</option>
                     <option value="blank">Em branco</option>
                     <option value="nf">Nota Fiscal</option>
                     <option value="recibo">Recibo</option>
@@ -306,11 +398,22 @@ export function CanvasPage() {
 
                 <div style={{ flex: 1 }} />
 
+<<<<<<< Updated upstream
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                        value={activeDoc.name}
+                        onChange={(e) => updateDoc({ name: e.target.value })}
+                        style={{ ...inputStyle, width: 150 }}
+                        placeholder="Nome do documento"
+                    />
+                    <button
+                        onClick={handleSave}
+=======
                 <ToolbarButton onClick={handlePrint}>🖨️ Gerar PDF</ToolbarButton>
             </div>
 
             {/* Document tabs */}
-            <div style={{
+            <div className="kanvas-document-tabs" style={{
                 display: 'flex',
                 gap: 4,
                 padding: '6px 10px',
@@ -322,50 +425,83 @@ export function CanvasPage() {
                     <div
                         key={d.id}
                         onClick={() => { setActiveDocId(d.id); setSelectedId(null); }}
+>>>>>>> Stashed changes
                         style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
-                            background: d.id === activeDocId ? 'var(--accent-light)' : 'transparent',
-                            border: `1px solid ${d.id === activeDocId ? 'var(--accent)' : 'var(--border)'}`,
-                            fontSize: 12,
+                            padding: '6px 16px',
+                            borderRadius: 6,
+                            border: 'none',
+                            background: 'var(--accent)',
+                            color: 'var(--accent-text)',
+                            cursor: 'pointer',
+                            fontSize: 13,
+                            fontWeight: 'bold',
                         }}
                     >
-                        <input
-                            value={d.name}
-                            onChange={(e) => {
-                                const v = e.target.value;
-                                setDocuments((p) => p.map((x) => (x.id === d.id ? { ...x, name: v } : x)));
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{
-                                background: 'transparent', border: 'none', outline: 'none',
-                                color: 'var(--text-primary)', width: Math.max(80, d.name.length * 7),
-                                fontSize: 12,
-                            }}
-                        />
-                        {documents.length > 1 && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDocuments((p) => {
-                                        const next = p.filter((x) => x.id !== d.id);
-                                        if (d.id === activeDocId && next[0]) setActiveDocId(next[0].id);
-                                        return next;
-                                    });
-                                }}
-                                style={{
-                                    background: 'transparent', border: 'none', cursor: 'pointer',
-                                    color: 'var(--text-primary)', fontSize: 14, lineHeight: 1,
-                                }}
-                                title="Fechar"
-                            >×</button>
-                        )}
-                    </div>
-                ))}
+                        💾 Salvar
+                    </button>
+                </div>
+
+                <Divider />
+
+                {activeDoc.type === 'nf' && (
+                    <ToolbarButton onClick={() => {
+                        if (activeDocId) setConfirmEmitId(activeDocId);
+                        else toast.warn('Salve o documento antes de emitir a NF!');
+                    }}>📄 Emitir NF</ToolbarButton>
+                )}
+                <ToolbarButton onClick={handlePrint}>🖨️ Gerar PDF</ToolbarButton>
             </div>
 
             {/* Canvas + properties */}
             <div className="kanvas-layout">
+                {/* Left Sidebar - Documents List */}
+                <aside className="kanvas-sidebar" style={{ borderLeft: 'none', borderRight: '1px solid var(--border)' }}>
+                    <div style={{ marginBottom: 16 }}>
+                        <h3 style={{ margin: 0, fontSize: 14 }}>Meus documentos</h3>
+                    </div>
+                    <hr style={{ marginBottom: 12, borderColor: 'var(--border)' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {documentosList?.map((doc: any) => (
+                            <div
+                                key={doc.id}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '8px 10px',
+                                    background: activeDocId === doc.id ? 'var(--accent-light)' : 'var(--bg-primary)',
+                                    border: `1px solid ${activeDocId === doc.id ? 'var(--accent)' : 'var(--border)'}`,
+                                    borderRadius: 6,
+                                    cursor: 'pointer',
+                                }}
+                                onClick={() => loadDocument(doc.id)}
+                            >
+                                <span style={{ fontSize: 12, fontWeight: activeDocId === doc.id ? 'bold' : 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {doc.nome}
+                                </span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteDoc(doc.id); }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'var(--danger)',
+                                        cursor: 'pointer',
+                                        fontSize: 14,
+                                    }}
+                                    title="Excluir"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                        {(!documentosList || documentosList.length === 0) && (
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 10 }}>
+                                Nenhum documento salvo.
+                            </div>
+                        )}
+                    </div>
+                </aside>
+
                 <div
                     className="kanvas-canvas-area"
                     onClick={() => setSelectedId(null)}
@@ -478,6 +614,107 @@ export function CanvasPage() {
             >
                 {isMobilePropsOpen ? '↓' : '⚙️'}
             </button>
+            <ConfirmationModal
+                isOpen={!!deleteDocId}
+                title="Excluir Documento"
+                message="Tem certeza que deseja excluir este documento? Esta ação não pode ser desfeita."
+                onConfirm={confirmDeleteDoc}
+                onCancel={() => setDeleteDocId(null)}
+                confirmText="Excluir"
+            />
+            <ConfirmationModal
+                isOpen={!!confirmEmitId}
+                title="Emitir Nota Fiscal"
+                message="Atenção: A emissão da Nota Fiscal não pode ser desfeita e terá validade fiscal. Deseja prosseguir com a emissão?"
+                onConfirm={confirmEmitirNf}
+                onCancel={() => setConfirmEmitId(null)}
+                confirmText="Emitir NF"
+                isDanger={false}
+            />
+            {/* Modal de Seleção de Agendamento */}
+            <Modal
+                title="Faturar Agendamento (Nota Fiscal)"
+                open={agendaModalOpen}
+                onClose={() => setAgendaModalOpen(false)}
+                size="md"
+                content={
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
+                            Selecione abaixo o agendamento de origem. O sistema irá carregar os itens, calcular datas, frete e desconto, e auto-preencher os dados do cliente na Nota Fiscal.
+                        </p>
+                        <div style={{
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 8,
+                            paddingRight: 4,
+                            maxHeight: '40vh'
+                        }}>
+                            {(dbData.agendas || []).map((agenda: any) => {
+                                const clientName = agenda.clientes?.nome || 'Cliente Sem Nome';
+                                const dateStr = agenda.data ? new Date(agenda.data).toLocaleDateString('pt-BR') : '';
+                                const endStr = agenda.dataColeta ? new Date(agenda.dataColeta).toLocaleDateString('pt-BR') : '';
+                                const qtyItems = agenda.itens?.length || 0;
+                                const fmtTotal = agenda.valorTotal?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
+
+                                return (
+                                    <div
+                                        key={agenda.id}
+                                        onClick={() => handleSelectAgendaForNf(agenda.id)}
+                                        style={{
+                                            padding: '12px 16px',
+                                            borderRadius: 10,
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-primary)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            transition: 'all 0.2s',
+                                        }}
+                                        className="agenda-item-hover"
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <strong style={{ fontSize: 14, color: 'var(--text-primary)' }}>{clientName}</strong>
+                                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                                📅 Período: {dateStr} até {endStr} | 📦 {qtyItems} item(ns)
+                                            </span>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <strong style={{ fontSize: 14, color: 'var(--accent)' }}>{fmtTotal}</strong>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {(!dbData.agendas || dbData.agendas.length === 0) && (
+                                <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 13 }}>
+                                    Nenhum agendamento encontrado no banco de dados.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                }
+                footer={
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => setAgendaModalOpen(false)}
+                            style={{ padding: '8px 16px', borderRadius: 6 }}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                }
+            />
+            <style>{`
+                .agenda-item-hover:hover {
+                    border-color: var(--accent) !important;
+                    background-color: var(--accent-light) !important;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.1);
+                }
+            `}</style>
         </div>
     );
 }

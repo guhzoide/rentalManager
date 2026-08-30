@@ -53,6 +53,19 @@ export function DataGrid<T extends Record<string, any>>({
     const totalCount = total ?? filtered.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
+    const renderValue = (column: Column<T>, row: T) =>
+        column.render ? column.render(row[column.key], row) : (row[column.key] ?? '—');
+
+    const handleRowKeyDown = (event: React.KeyboardEvent, row: T) => {
+        if (
+            !onRowClick
+            || event.target !== event.currentTarget
+            || (event.key !== 'Enter' && event.key !== ' ')
+        ) return;
+        event.preventDefault();
+        onRowClick(row);
+    };
+
     return (
         <div className="datagrid-wrapper">
             {/* Toolbar */}
@@ -61,6 +74,7 @@ export function DataGrid<T extends Record<string, any>>({
                     <span className="datagrid-search-icon">🔍</span>
                     <input
                         type="text"
+                        aria-label="Buscar registros"
                         placeholder="Buscar..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -69,12 +83,12 @@ export function DataGrid<T extends Record<string, any>>({
 
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'left' }}>
                     {onRefresh && (
-                        <button className="btn btn-primary" onClick={onRefresh}>
+                        <button className="btn btn-primary" onClick={onRefresh} aria-label="Atualizar listagem" title="Atualizar listagem">
                             <RefreshIcon />
                         </button>
                     )}
                     {onAdd && (
-                        <button className="btn btn-primary" onClick={onAdd}>
+                        <button className="btn btn-primary" onClick={onAdd} aria-label="Adicionar registro" title="Adicionar registro">
                             <AddCircleIcon />
                         </button>
                     )}
@@ -94,7 +108,8 @@ export function DataGrid<T extends Record<string, any>>({
                         <p>{emptyText}</p>
                     </div>
                 ) : (
-                    <table className="datagrid">
+                    <>
+                    <table className="datagrid datagrid-desktop">
                         <thead>
                             <tr>
                                 {columns.map((col) => (
@@ -109,18 +124,38 @@ export function DataGrid<T extends Record<string, any>>({
                                 <tr
                                     key={row[keyField] ?? idx}
                                     onClick={() => onRowClick?.(row)}
+                                    onKeyDown={(event) => handleRowKeyDown(event, row)}
+                                    tabIndex={onRowClick ? 0 : undefined}
                                 >
                                     {columns.map((col) => (
                                         <td key={col.key}>
-                                            {col.render
-                                                ? col.render(row[col.key], row)
-                                                : (row[col.key] ?? '—')}
+                                            {renderValue(col, row)}
                                         </td>
                                     ))}
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    <div className="datagrid-mobile-list">
+                        {filtered.map((row, idx) => (
+                            <article
+                                key={row[keyField] ?? idx}
+                                className={`datagrid-mobile-card${onRowClick ? ' clickable' : ''}`}
+                                onClick={() => onRowClick?.(row)}
+                                onKeyDown={(event) => handleRowKeyDown(event, row)}
+                                tabIndex={onRowClick ? 0 : undefined}
+                                role={onRowClick ? 'button' : undefined}
+                            >
+                                {columns.map((column) => (
+                                    <div key={column.key} className="datagrid-mobile-field">
+                                        <span className="datagrid-mobile-label">{column.label}</span>
+                                        <div className="datagrid-mobile-value">{renderValue(column, row)}</div>
+                                    </div>
+                                ))}
+                            </article>
+                        ))}
+                    </div>
+                    </>
                 )}
             </div>
 

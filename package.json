@@ -8,7 +8,8 @@
     "dev:server": "bun --watch src/server/index.ts",
     "build": "prisma generate && tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "node patch-es-toolkit.js"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.11",
@@ -37,6 +38,7 @@
     "react-dom": "^19.2.5",
     "react-hook-form": "^7.76.0",
     "react-toastify": "^11.1.0",
+    "recharts": "^3.8.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

@@ -20,9 +20,10 @@ type LoginInput = z.infer<typeof loginSchema>;
 
 interface LoginPageProps {
     onLoginSuccess: () => void;
+    empresaData: any;
 }
 
-export function LoginPage({ onLoginSuccess }: LoginPageProps) {
+export function LoginPage({ onLoginSuccess, empresaData }: LoginPageProps) {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -91,9 +92,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
                 {/* Logo */}
                 <div className="login-logo">
-                    <div className="login-logo-icon">🏗</div>
+                    <div className="login-logo-icon"><img src={empresaData?.logoUrl ?? "/favicon.svg"} alt="" style={{ width: '100%', height: '100%', borderRadius: '20%' }} /></div>
+
                     <div>
-                        <h2 className="login-logo-title">Seja bem-vindo(a)!</h2>
+                        <h2 className="login-logo-title">{empresaData?.nome ?? 'Bem-vindo (a)'}</h2>
                         <p className="login-logo-sub">Insira suas credenciais para acessar o sistema</p>
                     </div>
                 </div>

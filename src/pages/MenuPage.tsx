@@ -41,11 +41,23 @@ const modules = [
         color: 'rgba(16, 185, 129, 0.2)',
     },
     {
-        id: 'kanvas',
+        id: 'canvas',
         icon: '🖼️',
-        title: 'Kanvas',
+        title: 'Canvas',
         desc: 'Crie e gerencie documentos personalizados',
         color: 'rgba(99, 102, 241, 0.2)',
+    },
+    {
+        id: 'empresa',
+        icon: '🏢',
+        title: 'Empresa',
+<<<<<<< Updated upstream
+        desc: 'Configure os dados cadastrais e o logotipo',
+        color: 'rgba(168, 85, 247, 0.2)',
+=======
+        desc: 'Atualize os dados cadastrais da locadora',
+        color: 'rgba(14, 165, 233, 0.2)',
+>>>>>>> Stashed changes
     },
 ];
 

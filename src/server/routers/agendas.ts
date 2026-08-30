@@ -6,6 +6,42 @@ import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
 import { agendaSchema } from '../../lib/schemas.js';
 import { type agendas } from '@prisma/client';
 
+async function reserveItems(tx: any, items: { itemId: string; quantidade: number }[]) {
+    const quantitiesByItem = new Map<string, number>();
+    for (const item of items) {
+        quantitiesByItem.set(item.itemId, (quantitiesByItem.get(item.itemId) ?? 0) + item.quantidade);
+    }
+
+    for (const [itemId, quantidade] of quantitiesByItem) {
+        const item = await tx.estoques.findUnique({ where: { id: itemId } });
+        if (!item) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Item de estoque não encontrado.' });
+        }
+        if (item.disponivel < quantidade) {
+            throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: `Estoque insuficiente para ${item.nome}. Disponível: ${item.disponivel}.`,
+            });
+        }
+    }
+
+    for (const [itemId, quantidade] of quantitiesByItem) {
+        await tx.estoques.update({
+            where: { id: itemId },
+            data: { disponivel: { decrement: quantidade }, updatedAt: new Date() },
+        });
+    }
+}
+
+async function releaseItems(tx: any, items: { itemId: string; quantidade: number }[]) {
+    for (const item of items) {
+        await tx.estoques.update({
+            where: { id: item.itemId },
+            data: { disponivel: { increment: item.quantidade }, updatedAt: new Date() },
+        });
+    }
+}
+
 export const agendaRouter = router({
     list: protectedProcedure
         .input(paginationSchema)
@@ -27,15 +63,8 @@ export const agendaRouter = router({
         .input(agendaSchema)
         .mutation(async ({ input }) => {
             return prisma.$transaction(async (tx) => {
-                // Decrementar quantidade disponível de cada item selecionado
-                for (const item of input.itens) {
-                    await tx.estoques.update({
-                        where: { id: item.itemId },
-                        data: {
-                            disponivel: { decrement: item.quantidade },
-                            updatedAt: new Date(),
-                        },
-                    });
+                if (!input.concluida) {
+                    await reserveItems(tx, input.itens);
                 }
 
                 // Criar o agendamento
@@ -47,7 +76,9 @@ export const agendaRouter = router({
                         enderecoId: input.enderecoId,
                         observacao: input.observacao,
                         desconto: input.desconto,
+                        frete: input.frete,
                         valorTotal: input.valorTotal,
+                        concluida: input.concluida,
                         itens: {
                             create: input.itens.map((i) => ({
                                 itemId: i.itemId,
@@ -87,33 +118,22 @@ export const agendaRouter = router({
                     });
                 }
 
-                // Se a lista de itens foi fornecida no update, realizar os ajustes de estoque correspondentes
-                if (input.data.itens) {
-                    // Devolver estoque dos itens antigos
-                    for (const oldItem of currentAgenda.itens) {
-                        await tx.estoques.update({
-                            where: { id: oldItem.itemId },
-                            data: {
-                                disponivel: { increment: oldItem.quantidade },
-                                updatedAt: new Date(),
-                            },
-                        });
+                const itemsWereChanged = input.data.itens !== undefined;
+                const completionWasChanged = input.data.concluida !== undefined;
+                const willBeCompleted = input.data.concluida ?? currentAgenda.concluida;
+
+                if (itemsWereChanged || completionWasChanged) {
+                    if (!currentAgenda.concluida) {
+                        await releaseItems(tx, currentAgenda.itens);
                     }
 
-                    // Remover relações de itens antigas
-                    await tx.agenda_itens.deleteMany({
-                        where: { agendaId: input.id },
-                    });
+                    if (itemsWereChanged) {
+                        await tx.agenda_itens.deleteMany({ where: { agendaId: input.id } });
+                    }
 
-                    // Retirar estoque das novas quantidades dos novos itens solicitados
-                    for (const newItem of input.data.itens) {
-                        await tx.estoques.update({
-                            where: { id: newItem.itemId },
-                            data: {
-                                disponivel: { decrement: newItem.quantidade },
-                                updatedAt: new Date(),
-                            },
-                        });
+                    const finalItems = input.data.itens ?? currentAgenda.itens;
+                    if (!willBeCompleted) {
+                        await reserveItems(tx, finalItems);
                     }
                 }
 
@@ -149,22 +169,14 @@ export const agendaRouter = router({
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {
             return prisma.$transaction(async (tx) => {
-                // Buscar o agendamento para identificar todos os itens e restaurar o estoque
+                // Somente agendas ainda abertas possuem itens reservados no estoque.
                 const agenda = await tx.agendas.findUnique({
                     where: { id: input.id },
                     include: { itens: true },
                 });
 
-                if (agenda) {
-                    for (const oldItem of agenda.itens) {
-                        await tx.estoques.update({
-                            where: { id: oldItem.itemId },
-                            data: {
-                                disponivel: { increment: oldItem.quantidade },
-                                updatedAt: new Date(),
-                            },
-                        });
-                    }
+                if (agenda && !agenda.concluida) {
+                    await releaseItems(tx, agenda.itens);
                 }
 
                 // Deletar o agendamento

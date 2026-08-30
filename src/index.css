@@ -115,6 +115,8 @@ body {
 .app-layout {
   display: flex;
   height: 100vh;
+  height: 100dvh;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -142,7 +144,7 @@ body {
 }
 
 .sidebar-logo-icon {
-  width: 32px;
+  width: 50px;
   height: 32px;
   background: linear-gradient(135deg, var(--accent), #8b5cf6);
   border-radius: 8px;
@@ -210,6 +212,8 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -318,13 +322,46 @@ body {
 /* ─── Page Content ───────────────────────────────────────────────────────────── */
 .page-content {
   flex: 1;
-  overflow-y: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--bg-card);
+}
+
+.page-view {
+  display: none;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.page-view.active {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.page-view-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+.page-view-content--kanvas {
+  overflow: hidden;
 }
 
 .page-inner {
   padding: 24px;
   width: 100%;
+  min-width: 0;
 }
 
 /* ─── Menu Page ──────────────────────────────────────────────────────────────── */
@@ -471,6 +508,8 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
   gap: 0;
 }
 
@@ -520,7 +559,11 @@ body {
 
 .datagrid-table-wrapper {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 table.datagrid {
@@ -600,6 +643,10 @@ table.datagrid tbody tr:last-child td {
   gap: 6px;
 }
 
+.datagrid-mobile-list {
+  display: none;
+}
+
 /* ─── Modal ──────────────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
@@ -611,6 +658,7 @@ table.datagrid tbody tr:last-child td {
   justify-content: center;
   z-index: 100;
   animation: fadeIn 0.15s ease;
+  padding: 24px;
 }
 
 @keyframes fadeIn {
@@ -642,7 +690,7 @@ table.datagrid tbody tr:last-child td {
   box-shadow: var(--shadow-lg);
   width: 100%;
   max-width: 560px;
-  max-height: 90vh;
+  max-height: min(90vh, 90dvh);
   display: flex;
   flex-direction: column;
   animation: slideUp 0.2s ease;
@@ -2014,5 +2062,337 @@ select.form-control {
   }
   .desktop-hide {
     display: flex !important;
+  }
+}
+
+/* ─── Mobile-first interaction refinements ────────────────────────────────── */
+@media (max-width: 768px) {
+  html,
+  body,
+  #root,
+  .app-layout {
+    min-height: 100dvh;
+    height: 100dvh;
+  }
+
+  body {
+    font-size: 15px;
+  }
+
+  .main-area {
+    min-width: 0;
+  }
+
+  .page-inner {
+    padding: 16px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+  }
+
+  .page-header h2 {
+    font-size: 20px;
+  }
+
+  .sidebar {
+    width: min(86vw, 320px);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .sidebar-logo,
+  .mobile-topbar {
+    min-height: var(--topbar-height);
+  }
+
+  .sidebar-item {
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  .sidebar-item .item-label {
+    font-size: 14px;
+  }
+
+  .mobile-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .mobile-hamburger,
+  .modal-close,
+  .catalog-modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .tab-bar {
+    min-height: 44px;
+    padding: 0 8px 4px;
+    scroll-snap-type: x proximity;
+  }
+
+  .tab-item {
+    height: 40px;
+    padding: 0 10px;
+    scroll-snap-align: start;
+  }
+
+  .tab-close {
+    width: 28px;
+    height: 28px;
+  }
+
+  .btn {
+    min-height: 42px;
+    justify-content: center;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+  }
+
+  .form-control,
+  .datagrid-search input,
+  .catalog-search-input {
+    font-size: 16px;
+  }
+
+  .MuiInputBase-input,
+  .MuiInputLabel-root,
+  .MuiAutocomplete-input {
+    font-size: 16px !important;
+  }
+
+  .datagrid-toolbar {
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  .datagrid-toolbar > div:last-child {
+    justify-content: flex-end !important;
+  }
+
+  .datagrid-desktop {
+    display: none;
+  }
+
+  .datagrid-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 16px 16px;
+  }
+
+  .datagrid-mobile-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .datagrid-mobile-card.clickable {
+    cursor: pointer;
+  }
+
+  .datagrid-mobile-card.clickable:active {
+    background: var(--bg-hover);
+    transform: scale(0.995);
+  }
+
+  .datagrid-mobile-card:focus-visible {
+    outline: 3px solid var(--accent-light);
+    border-color: var(--accent);
+  }
+
+  .datagrid-mobile-field {
+    display: grid;
+    grid-template-columns: minmax(88px, 36%) 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .datagrid-mobile-label {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+
+  .datagrid-mobile-value {
+    min-width: 0;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+  }
+
+  .datagrid-footer {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    max-width: none !important;
+    max-height: min(92dvh, 760px);
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    animation: slideUpMobile 0.2s ease-out;
+  }
+
+  .modal-header {
+    padding: 16px 20px 12px;
+  }
+
+  .modal-body {
+    padding: 16px 20px;
+  }
+
+  .modal-footer {
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+  }
+
+  .modal-footer .btn {
+    flex: 1 1 132px;
+  }
+
+  .menu-page {
+    align-items: stretch;
+    padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .menu-welcome {
+    text-align: left;
+    margin-bottom: 24px;
+  }
+
+  .menu-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .menu-card {
+    min-height: 92px;
+    padding: 16px;
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+  }
+
+  .menu-card-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 23px;
+    flex-shrink: 0;
+  }
+
+  .agenda-layout {
+    gap: 16px;
+  }
+
+  .calendar-header {
+    padding: 12px;
+  }
+
+  .calendar-grid {
+    padding: 12px;
+  }
+
+  .agenda-form-card.mobile-modal,
+  .finance-form-card.mobile-modal,
+  .kanvas-sidebar {
+    height: min(92dvh, 760px);
+    padding: 20px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .agenda-item-row {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 10px !important;
+  }
+
+  .agenda-item-row > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .agenda-item-quantity {
+    width: 112px !important;
+  }
+
+  .kanvas-toolbar {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding: 10px 12px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kanvas-toolbar > * {
+    flex-shrink: 0;
+  }
+
+  .kanvas-document-tabs {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .catalog-page {
+    height: 100dvh;
+  }
+
+  .catalog-hero-title {
+    font-size: clamp(30px, 10vw, 42px);
+    letter-spacing: -1px;
+  }
+
+  .catalog-hero-subtitle {
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  .catalog-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .catalog-card {
+    min-height: 180px;
+    padding: 20px;
+  }
+
+  .catalog-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .catalog-modal {
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    overflow-y: auto;
+  }
+
+  .catalog-modal-specs {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

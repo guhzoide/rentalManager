@@ -16,7 +16,46 @@ export function FieldGroupElementView({ el, dbData }: { el: FieldGroupElement; d
     })();
 
     const resolveValue = (f: FieldGroupField): string => {
-        if (f.dbColumn && record) return formatDbValue(record[f.dbColumn], f.dbColumn);
+        if (f.isCurrency && f.sumColumn && el.dbTable) {
+            const records = dbData[el.dbTable as DbTableName] || [];
+            const total = records.reduce((sum: number, r: any) => {
+                const val = r[f.sumColumn!];
+                const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^\d,-]/g, '').replace(',', '.'));
+                return sum + (isNaN(num) ? 0 : num);
+            }, 0);
+            return total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        let rawVal = undefined;
+        if (f.dbColumn && record) {
+            const parts = f.dbColumn.split('.');
+            let curr = record;
+            for (const part of parts) {
+                if (curr && typeof curr === 'object') {
+                    curr = curr[part];
+                } else {
+                    curr = undefined;
+                }
+            }
+            rawVal = curr;
+            if (rawVal === undefined && f.dbColumn.includes('.')) {
+                const lastPart = f.dbColumn.split('.').pop()!;
+                rawVal = record[lastPart];
+            }
+        } else {
+            rawVal = f.staticValue;
+        }
+
+        if (rawVal === undefined || rawVal === null) return '';
+
+        if (f.isCurrency) {
+            const num = typeof rawVal === 'number' ? rawVal : parseFloat(String(rawVal).replace(/[^\d,-]/g, '').replace(',', '.'));
+            if (!isNaN(num)) {
+                return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            }
+        }
+
+        if (f.dbColumn && record) return formatDbValue(rawVal, f.dbColumn);
         return f.staticValue ?? '';
     };
 
