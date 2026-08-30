@@ -28,21 +28,6 @@ export const empresaRouter = router({
             });
         }),
 
-    update: protectedProcedure
-        .input(z.object({
-            id: z.string(),
-            data: empresaSchema,
-        }))
-        .mutation(async ({ input }) => {
-            return prisma.empresas.update({
-                where: { id: input.id },
-                data: {
-                    ...input.data,
-                    updatedAt: new Date(),
-                }
-            });
-        }),
-
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {

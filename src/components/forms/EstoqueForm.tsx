@@ -5,7 +5,10 @@ import TextField from '@mui/material/TextField';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
+import type { z } from 'zod';
 import { estoqueSchema, type EstoqueInput } from '@/lib/schemas';
+
+type EstoqueFormValues = z.input<typeof estoqueSchema>;
 
 interface EstoqueFormProps {
     defaultValues?: Partial<EstoqueInput>;
@@ -20,7 +23,7 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
         setValue,
         watch,
         formState: { errors },
-    } = useForm<EstoqueInput>({
+    } = useForm<EstoqueFormValues, unknown, EstoqueInput>({
         resolver: zodResolver(estoqueSchema),
         defaultValues: {
             nome: '',

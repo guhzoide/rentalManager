@@ -1,10 +1,9 @@
-import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { trpc, trpcClient } from '@/lib/trpc';
 
 import { MenuPage } from '@/pages/MenuPage';
 import { LoginPage } from '@/pages/LoginPage';
-import { EMPRESA_ID } from '@/lib/empresa';
 
 const ClientesPage = lazy(() => import('@/pages/ClientesPage').then(m => ({ default: m.ClientesPage })));
 const EstoquePage = lazy(() => import('@/pages/EstoquePage').then(m => ({ default: m.EstoquePage })));
@@ -61,11 +60,7 @@ const ALL_TABS: Record<string, Tab> = {
     estoque: { id: 'estoque', label: 'Estoque', icon: '📦' },
     usuarios: { id: 'usuarios', label: 'Usuários', icon: '👤' },
     financeiro: { id: 'financeiro', label: 'Financeiro', icon: '💵' },
-<<<<<<< Updated upstream
     canvas: { id: 'canvas', label: 'Canvas', icon: '🖼️' },
-=======
-    kanvas: { id: 'kanvas', label: 'Kanvas', icon: '🖼️' },
->>>>>>> Stashed changes
     empresa: { id: 'empresa', label: 'Empresa', icon: '🏢' },
 };
 
@@ -76,11 +71,7 @@ const SIDEBAR_ITEMS = [
     { id: 'estoque', label: 'Estoque', icon: '📦' },
     { id: 'usuarios', label: 'Usuários', icon: '👤' },
     { id: 'financeiro', label: 'Financeiro', icon: '💵' },
-<<<<<<< Updated upstream
     { id: 'canvas', label: 'Canvas', icon: '🖼️' },
-=======
-    { id: 'kanvas', label: 'Kanvas', icon: '🖼️' },
->>>>>>> Stashed changes
     { id: 'empresa', label: 'Empresa', icon: '🏢' },
 ];
 
@@ -91,11 +82,7 @@ function renderPage(id: string) {
         case 'usuarios': return <UsuariosPage />;
         case 'agenda': return <AgendaPage />;
         case 'financeiro': return <FinancePage />;
-<<<<<<< Updated upstream
         case 'canvas': return <CanvasPage />;
-=======
-        case 'kanvas': return <CanvasPage />;
->>>>>>> Stashed changes
         case 'empresa': return <EmpresaPage />;
         default: return null;
     }
@@ -133,14 +120,10 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
         return () => window.removeEventListener('popstate', checkRoute);
     }, []);
 
-<<<<<<< Updated upstream
     const { data: empresaData, isLoading: isLoadingList } = trpc.empresa.list.useQuery(
         { id: "58f51956-983a-4046-b011-ca785ff41205" },
         { enabled: !!session }
     );
-=======
-    const { data: empresaData, isLoading: isLoadingList } = trpc.empresa.list.useQuery({ id: EMPRESA_ID });
->>>>>>> Stashed changes
 
     if (isLoadingList) {
         return <PageLoader />;
@@ -322,11 +305,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                                 key={tab.id}
                                 className="page-view active"
                             >
-<<<<<<< Updated upstream
-                                <div style={{ flex: 1, overflowY: 'auto' }}>
-=======
-                                <div className={`page-view-content${tab.id === 'kanvas' ? ' page-view-content--kanvas' : ''}`}>
->>>>>>> Stashed changes
+                                <div className={`page-view-content${tab.id === 'canvas' ? ' page-view-content--kanvas' : ''}`}>
                                     <Suspense fallback={<PageLoader />}>
                                         {renderPage(tab.id)}
                                     </Suspense>
