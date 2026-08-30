@@ -7,7 +7,9 @@ export const usuarioCreateSchema = z.object({
     email: z.string().email('E-mail inválido'),
     senha: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
     atendente: z.boolean(),
+    master: z.boolean(),
     whatsapp: z.string().optional().nullable(),
+    grupoCodigo: z.number().int().positive().optional().nullable(),
 });
 
 export const usuarioUpdateSchema = z.object({
@@ -15,11 +17,23 @@ export const usuarioUpdateSchema = z.object({
     email: z.string().email('E-mail inválido').optional(),
     senha: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres').optional(),
     atendente: z.boolean().optional(),
+    master: z.boolean().optional(),
     whatsapp: z.string().optional().nullable(),
+    grupoCodigo: z.number().int().positive().optional().nullable(),
 });
 
 export type UsuarioCreateInput = z.infer<typeof usuarioCreateSchema>;
 export type UsuarioUpdateInput = z.infer<typeof usuarioUpdateSchema>;
+
+// ─── Grupo de acesso ─────────────────────────────────────────────────────────
+
+export const grupoSchema = z.object({
+    nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+    descricao: z.string().optional().nullable(),
+    moduloIds: z.array(z.string()).default([]),
+});
+
+export type GrupoInput = z.infer<typeof grupoSchema>;
 
 // ─── Cliente ──────────────────────────────────────────────────────────────────
 
@@ -89,7 +103,23 @@ export const agendaSchema = z.object({
     concluida: z.boolean().default(false),
 });
 
+// Updates must not reuse defaults from agendaSchema: omitted fields need to stay
+// omitted, especially when changing only the completion status.
+export const agendaUpdateSchema = z.object({
+    data: z.coerce.date().optional(),
+    dataColeta: z.coerce.date().optional(),
+    clienteId: z.string().min(1, 'Cliente é obrigatório').optional(),
+    enderecoId: z.string().min(1, 'Endereço é obrigatório').optional(),
+    observacao: z.string().optional(),
+    itens: z.array(agendaItemSchema).min(1, 'Adicione pelo menos um item').optional(),
+    desconto: z.number().min(0).max(100).optional(),
+    frete: z.number().min(0).optional(),
+    valorTotal: z.number().min(0).optional(),
+    concluida: z.boolean().optional(),
+});
+
 export type AgendaInput = z.infer<typeof agendaSchema>;
+export type AgendaUpdateInput = z.infer<typeof agendaUpdateSchema>;
 
 // ─── Empresa ──────────────────────────────────────────────────────────────────
 

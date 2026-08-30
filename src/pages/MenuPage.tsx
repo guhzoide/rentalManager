@@ -2,61 +2,15 @@ import { useSession } from '@/lib/auth-client';
 
 interface MenuPageProps {
     onNavigate: (module: string) => void;
+    modules: Array<{
+        id: string;
+        nome: string;
+        descricao?: string | null;
+        icone: string;
+    }>;
 }
 
-const modules = [
-    {
-        id: 'agenda',
-        icon: '📅',
-        title: 'Agenda',
-        desc: 'Gerencie os agendamentos de locação por data',
-        color: 'rgba(99, 102, 241, 0.2)',
-    },
-    {
-        id: 'clientes',
-        icon: '👥',
-        title: 'Clientes',
-        desc: 'Cadastre e gerencie os clientes da locadora',
-        color: 'rgba(34, 197, 94, 0.2)',
-    },
-    {
-        id: 'estoque',
-        icon: '📦',
-        title: 'Estoque',
-        desc: 'Controle os itens disponíveis para locação',
-        color: 'rgba(245, 158, 11, 0.2)',
-    },
-    {
-        id: 'usuarios',
-        icon: '👤',
-        title: 'Usuários',
-        desc: 'Manutenção de usuários do sistema',
-        color: 'rgba(239, 68, 68, 0.2)',
-    },
-    {
-        id: 'financeiro',
-        icon: '💰',
-        title: 'Financeiro',
-        desc: 'Gerencie o fluxo de caixa e transações',
-        color: 'rgba(16, 185, 129, 0.2)',
-    },
-    {
-        id: 'canvas',
-        icon: '🖼️',
-        title: 'Canvas',
-        desc: 'Crie e gerencie documentos personalizados',
-        color: 'rgba(99, 102, 241, 0.2)',
-    },
-    {
-        id: 'empresa',
-        icon: '🏢',
-        title: 'Empresa',
-        desc: 'Configure os dados cadastrais e o logotipo',
-        color: 'rgba(168, 85, 247, 0.2)',
-    },
-];
-
-export function MenuPage({ onNavigate }: MenuPageProps) {
+export function MenuPage({ onNavigate, modules }: MenuPageProps) {
     const { data: session } = useSession();
 
     return (
@@ -67,21 +21,21 @@ export function MenuPage({ onNavigate }: MenuPageProps) {
             </div>
 
             <div className="menu-grid">
-                {modules.map((mod) => (
+                {modules.map((module) => (
                     <button
-                        key={mod.id}
+                        key={module.id}
                         className="menu-card"
-                        onClick={() => onNavigate(mod.id)}
+                        onClick={() => onNavigate(module.id)}
                     >
                         <div
                             className="menu-card-icon"
-                            style={{ background: mod.color }}
+                            style={{ background: 'rgba(99, 102, 241, 0.2)' }}
                         >
-                            {mod.icon}
+                            {module.icone}
                         </div>
                         <div>
-                            <div className="menu-card-title">{mod.title}</div>
-                            <div className="menu-card-desc">{mod.desc}</div>
+                            <div className="menu-card-title">{module.nome}</div>
+                            <div className="menu-card-desc">{module.descricao}</div>
                         </div>
                     </button>
                 ))}

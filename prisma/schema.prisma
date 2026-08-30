@@ -102,14 +102,44 @@ model User {
   emailVerified Boolean   @default(false)
   image         String?
   atendente     Boolean   @default(false)
+  master        Boolean   @default(false)
   whatsapp      String?
+  grupoCodigo   Int?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  documentos    documentos[]
 
   @@unique([email])
   @@map("user")
+}
+
+model modulos {
+  id          String   @id @map("_id")
+  nome        String
+  descricao   String?
+  icone       String
+  ordem       Int
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model grupos {
+  id          String   @id @default(uuid()) @map("_id")
+  codigo      Int      @unique
+  nome        String
+  descricao   String?
+  moduloIds   String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model contadores {
+  id        String   @id @map("_id")
+  valor     Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
 
 model Session {
@@ -174,6 +204,10 @@ model documentos {
   id        String   @id @default(uuid()) @map("_id")
   nome      String
   content   Json
+  usuarioId String?
+  usuario   User?    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([usuarioId])
 }

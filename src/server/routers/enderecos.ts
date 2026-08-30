@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { protectedProcedure, router } from '../trpc.js';
+import { moduleProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
 import { enderecoSchema } from '../../lib/schemas.js';
@@ -8,13 +8,13 @@ import { enderecoSchema } from '../../lib/schemas.js';
 import { type enderecos } from '@prisma/client';
 
 export const enderecoRouter = router({
-  list: protectedProcedure
+  list: moduleProcedure(['clientes', 'agenda'])
     .input(paginationSchema)
     .query(async ({ input }) => {
       return getPaginatedResult<enderecos>(prisma.enderecos, input);
     }),
 
-  byClienteId: protectedProcedure
+  byClienteId: moduleProcedure(['clientes', 'agenda'])
     .input(z.object({ clienteId: z.string() }))
     .query(async ({ input }) => {
       return prisma.enderecos.findMany({
@@ -23,7 +23,7 @@ export const enderecoRouter = router({
       });
     }),
 
-  create: protectedProcedure
+  create: moduleProcedure('clientes')
     .input(enderecoSchema)
     .mutation(async ({ input }) => {
       // If this new address is primary, toggle off all other addresses for this customer first
@@ -42,7 +42,7 @@ export const enderecoRouter = router({
       });
     }),
 
-  update: protectedProcedure
+  update: moduleProcedure('clientes')
     .input(z.object({
       id: z.string(),
       data: enderecoSchema.partial(),
@@ -71,7 +71,7 @@ export const enderecoRouter = router({
       });
     }),
 
-  delete: protectedProcedure
+  delete: moduleProcedure('clientes')
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       return prisma.enderecos.delete({

@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
+import { customSession } from "better-auth/plugins";
 
 const origins = [
     "http://localhost:5173",
@@ -46,5 +47,35 @@ export const auth = betterAuth({
     },
     baseURL: baseURL || undefined,
     trustedOrigins: origins,
+    plugins: [
+        customSession(async ({ user, session }) => {
+            const databaseUser = await prisma.user.findUnique({
+                where: { id: user.id },
+                select: { grupoCodigo: true, master: true },
+            });
+            const group = !databaseUser?.master && databaseUser?.grupoCodigo
+                ? await prisma.grupos.findUnique({ where: { codigo: databaseUser.grupoCodigo } })
+                : null;
+            const allowedPageIds = databaseUser?.master
+                ? (await prisma.modulos.findMany({ where: { ativo: true }, select: { id: true } })).map((module) => module.id)
+                : group?.moduloIds ?? [];
+            const allowedModules = await prisma.modulos.findMany({
+                where: { id: { in: allowedPageIds }, ativo: true },
+                orderBy: { ordem: 'asc' },
+                select: { id: true, nome: true, descricao: true, icone: true, ordem: true },
+            });
+
+            return {
+                session,
+                user: {
+                    ...user,
+                    grupoCodigo: databaseUser?.grupoCodigo ?? null,
+                    master: databaseUser?.master ?? false,
+                    allowedPages: allowedModules.map((module) => module.id),
+                    allowedModules,
+                },
+            };
+        }),
+    ],
 });
 export type Auth = typeof auth;

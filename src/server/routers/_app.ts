@@ -7,6 +7,7 @@ import { enderecoRouter } from './enderecos.js';
 import { transacaoRouter } from './transacoes.js';
 import { empresaRouter } from './empresa.js';
 import { documentoRouter } from './documentos.js';
+import { grupoRouter } from './grupos.js';
 export const appRouter = router({
   clientes: clienteRouter,
   estoque: estoqueRouter,
@@ -16,9 +17,9 @@ export const appRouter = router({
   transacoes: transacaoRouter,
   empresa: empresaRouter,
   documentos: documentoRouter,
+  grupos: grupoRouter,
 });
 
 
 
 export type AppRouter = typeof appRouter;
-

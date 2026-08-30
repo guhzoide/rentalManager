@@ -141,32 +141,30 @@ export function FinancePage() {
                     <p>Controle de movimentações, estatísticas de locação e fluxo consolidado</p>
                 </div>
 
-                {/* Date Selectors (only relevant for cash flow movements view) */}
-                {activeSubTab === 'movements' && (
-                    <div style={{ display: 'flex', gap: '10px', background: 'rgba(255, 255, 255, 0.03)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                        <select
-                            className="form-control"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                            style={{ width: '130px', margin: 0 }}
-                        >
-                            {MONTHS.map((m, idx) => (
-                                <option key={m} value={idx}>{m}</option>
-                            ))}
-                        </select>
+                {/* Date selectors shared by both finance tabs */}
+                <div style={{ display: 'flex', gap: '10px', background: 'rgba(255, 255, 255, 0.03)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <select
+                        className="form-control"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                        style={{ width: '130px', margin: 0 }}
+                    >
+                        {MONTHS.map((m, idx) => (
+                            <option key={m} value={idx}>{m}</option>
+                        ))}
+                    </select>
 
-                        <select
-                            className="form-control"
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(e.target.value)}
-                            style={{ width: '90px', margin: 0 }}
-                        >
-                            {YEARS.map((y) => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
+                    <select
+                        className="form-control"
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(e.target.value)}
+                        style={{ width: '90px', margin: 0 }}
+                    >
+                        {YEARS.map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {/* Sub-Tab Navigation Bar */}
@@ -190,7 +188,7 @@ export function FinancePage() {
                         fontSize: '14px'
                     }}
                 >
-                    📋 Fluxo de Caixa Mensal
+                    📋 Fluxo de caixa mensal
                 </button>
                 <button
                     className={`btn ${activeSubTab === 'analytics' ? 'btn-primary' : 'btn-ghost'}`}
@@ -370,7 +368,7 @@ export function FinancePage() {
                         <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    📅 Clientes Mais Antigos (Parceiros de Início)
+                                    📅 Clientes Mais Antigos
                                 </h3>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
                                     Clientes registrados há mais tempo no banco de dados da locadora

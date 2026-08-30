@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { protectedProcedure, publicProcedure, router } from '../trpc.js';
+import { moduleProcedure, publicProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
 import { usuarioCreateSchema, usuarioUpdateSchema } from '../../lib/schemas.js';
@@ -21,7 +21,7 @@ export const usuarioRouter = router({
             }));
         }),
 
-    list: protectedProcedure
+    list: moduleProcedure('usuarios')
         .input(paginationSchema)
         .query(async ({ input }) => {
             const result = await getPaginatedResult<any>(prisma.user as any, input, {
@@ -30,7 +30,9 @@ export const usuarioRouter = router({
                     name: true,
                     email: true,
                     atendente: true,
+                    master: true,
                     whatsapp: true,
+                    grupoCodigo: true,
                     createdAt: true,
                     updatedAt: true,
                 }
@@ -41,7 +43,9 @@ export const usuarioRouter = router({
                 nome: u.name,
                 email: u.email,
                 atendente: u.atendente,
+                master: u.master,
                 whatsapp: u.whatsapp,
+                grupoCodigo: u.grupoCodigo,
                 createdAt: u.createdAt,
                 updatedAt: u.updatedAt,
             }));
@@ -52,7 +56,7 @@ export const usuarioRouter = router({
             };
         }),
 
-    create: protectedProcedure
+    create: moduleProcedure('usuarios')
         .input(usuarioCreateSchema)
         .mutation(async ({ input }) => {
             const userId = crypto.randomUUID();
@@ -65,6 +69,10 @@ export const usuarioRouter = router({
             if (existing) {
                 throw new Error("E-mail já cadastrado");
             }
+            if (input.grupoCodigo) {
+                const group = await prisma.grupos.findUnique({ where: { codigo: input.grupoCodigo } });
+                if (!group) throw new Error('Grupo não encontrado');
+            }
 
             return await prisma.$transaction(async (tx) => {
                 const user = await tx.user.create({
@@ -73,7 +81,9 @@ export const usuarioRouter = router({
                         name: input.nome,
                         email: input.email,
                         atendente: input.atendente,
+                        master: input.master,
                         whatsapp: input.whatsapp,
+                        grupoCodigo: input.grupoCodigo,
                     }
                 });
 
@@ -92,18 +102,25 @@ export const usuarioRouter = router({
                     nome: user.name,
                     email: user.email,
                     atendente: user.atendente,
+                    master: user.master,
                     whatsapp: user.whatsapp,
+                    grupoCodigo: user.grupoCodigo,
                 };
             });
         }),
 
-    update: protectedProcedure
+    update: moduleProcedure('usuarios')
         .input(z.object({
             id: z.string(),
             data: usuarioUpdateSchema,
         }))
         .mutation(async ({ input }) => {
-            const { nome, email, senha, atendente, whatsapp } = input.data;
+            const { nome, email, senha, atendente, master, whatsapp, grupoCodigo } = input.data;
+
+            if (grupoCodigo) {
+                const group = await prisma.grupos.findUnique({ where: { codigo: grupoCodigo } });
+                if (!group) throw new Error('Grupo não encontrado');
+            }
 
             return await prisma.$transaction(async (tx) => {
                 const user = await tx.user.update({
@@ -112,7 +129,9 @@ export const usuarioRouter = router({
                         name: nome,
                         email: email,
                         atendente: atendente,
+                        master: master,
                         whatsapp: whatsapp,
+                        grupoCodigo: grupoCodigo,
                     }
                 });
 
@@ -136,12 +155,14 @@ export const usuarioRouter = router({
                     nome: user.name,
                     email: user.email,
                     atendente: user.atendente,
+                    master: user.master,
                     whatsapp: user.whatsapp,
+                    grupoCodigo: user.grupoCodigo,
                 };
             });
         }),
 
-    delete: protectedProcedure
+    delete: moduleProcedure('usuarios')
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {
             return prisma.user.delete({

@@ -13,6 +13,7 @@ const FinancePage = lazy(() => import('@/pages/FinancePage').then(m => ({ defaul
 const CatalogPage = lazy(() => import('@/pages/CatalogPage').then(m => ({ default: m.CatalogPage })));
 const CanvasPage = lazy(() => import('@/pages/CanvasPage').then(m => ({ default: m.CanvasPage })));
 const EmpresaPage = lazy(() => import('@/pages/EmpresaPage').then(m => ({ default: m.EmpresaPage })));
+const GruposPage = lazy(() => import('@/pages/GruposPage').then(m => ({ default: m.GruposPage })));
 
 import { useSession, signOut } from '@/lib/auth-client';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -54,32 +55,20 @@ interface Tab {
     icon: string;
 }
 
-const ALL_TABS: Record<string, Tab> = {
-    agenda: { id: 'agenda', label: 'Agenda', icon: '📅' },
-    clientes: { id: 'clientes', label: 'Clientes', icon: '👥' },
-    estoque: { id: 'estoque', label: 'Estoque', icon: '📦' },
-    usuarios: { id: 'usuarios', label: 'Usuários', icon: '👤' },
-    financeiro: { id: 'financeiro', label: 'Financeiro', icon: '💵' },
-    canvas: { id: 'canvas', label: 'Canvas', icon: '🖼️' },
-    empresa: { id: 'empresa', label: 'Empresa', icon: '🏢' },
-};
-
-const SIDEBAR_ITEMS = [
-    { id: 'menu', label: 'Menu', icon: '🏠' },
-    { id: 'agenda', label: 'Agenda', icon: '📅' },
-    { id: 'clientes', label: 'Clientes', icon: '👥' },
-    { id: 'estoque', label: 'Estoque', icon: '📦' },
-    { id: 'usuarios', label: 'Usuários', icon: '👤' },
-    { id: 'financeiro', label: 'Financeiro', icon: '💵' },
-    { id: 'canvas', label: 'Canvas', icon: '🖼️' },
-    { id: 'empresa', label: 'Empresa', icon: '🏢' },
-];
+interface SessionModule {
+    id: string;
+    nome: string;
+    descricao?: string | null;
+    icone: string;
+    ordem: number;
+}
 
 function renderPage(id: string) {
     switch (id) {
         case 'clientes': return <ClientesPage />;
         case 'estoque': return <EstoquePage />;
         case 'usuarios': return <UsuariosPage />;
+        case 'grupos': return <GruposPage />;
         case 'agenda': return <AgendaPage />;
         case 'financeiro': return <FinancePage />;
         case 'canvas': return <CanvasPage />;
@@ -100,6 +89,22 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     const [activeTab, setActiveTab] = useState<string | null>(null); // null = menu
     const [isCatalog, setIsCatalog] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const allowedPages = useMemo(
+        () => new Set((session?.user as { allowedPages?: string[] } | undefined)?.allowedPages
+            ?? []),
+        [session],
+    );
+    const allowedModules = useMemo(
+        () => ((session?.user as { allowedModules?: SessionModule[] } | undefined)?.allowedModules ?? []),
+        [session],
+    );
+    const availableTabs = useMemo(() => Object.fromEntries(
+        allowedModules.map((module) => [module.id, {
+            id: module.id,
+            label: module.nome,
+            icon: module.icone,
+        }]),
+    ) as Record<string, Tab>, [allowedModules]);
 
     // Theme effect
     useEffect(() => {
@@ -179,8 +184,8 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
             return;
         }
 
-        const tab = ALL_TABS[id];
-        if (!tab) return;
+        const tab = availableTabs[id];
+        if (!tab || !allowedPages.has(id)) return;
 
         if (!openTabs.find((t) => t.id === id)) {
             setOpenTabs((prev) => [...prev, tab]);
@@ -198,7 +203,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     };
 
     const currentSidebarId = activeTab ?? 'menu';
-    const mobileTitle = activeTab ? ALL_TABS[activeTab]?.label ?? 'RentalManager' : 'Menu';
+    const mobileTitle = activeTab ? availableTabs[activeTab]?.label ?? 'RentalManager' : 'Menu';
 
     return (
         <div className="app-layout">
@@ -223,14 +228,14 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                 </div>
 
                 <nav className="sidebar-nav">
-                    {SIDEBAR_ITEMS.map((item) => (
+                    {[{ id: 'menu', nome: 'Menu', icone: '🏠' }, ...allowedModules].map((item) => (
                         <button
                             key={item.id}
                             className={`sidebar-item${currentSidebarId === item.id ? ' active' : ''}`}
                             onClick={() => navigate(item.id)}
                         >
-                            <span className="item-icon">{item.icon}</span>
-                            <span className="item-label">{item.label}</span>
+                            <span className="item-icon">{item.icone}</span>
+                            <span className="item-label">{item.nome}</span>
                         </button>
                     ))}
 
@@ -295,7 +300,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                 <main className="page-content">
                     {/* Menu page */}
                     <div className={`page-view${activeTab === null ? ' active' : ''}`}>
-                        <MenuPage onNavigate={navigate} />
+                        <MenuPage onNavigate={navigate} modules={allowedModules} />
                     </div>
 
                     {/* Tab pages */}
