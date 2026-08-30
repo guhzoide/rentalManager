@@ -12,12 +12,23 @@ interface Usuario {
     nome: string;
     email: string;
     atendente: boolean;
+    master: boolean;
     whatsapp?: string | null;
+    grupoCodigo?: number | null;
+    grupoNome?: string | null;
 }
 
 const columns: Column<Usuario>[] = [
     { key: 'nome', label: 'Nome' },
     { key: 'email', label: 'E-mail' },
+    {
+        key: 'master',
+        label: 'Master',
+        render: (v: any) => v ? <span className="badge badge-accent">Sim</span> : <span style={{ color: 'var(--text-muted)' }}>Não</span>
+    },
+    { key: 'grupoCodigo', label: 'Grupo', render: (_, row) => row.grupoCodigo
+        ? `${row.grupoCodigo} — ${row.grupoNome || 'Grupo'}`
+        : row.master ? 'Acesso total' : 'Sem grupo' },
     {
         key: 'atendente',
         label: 'Atendente',
@@ -62,6 +73,12 @@ export function UsuariosPage() {
         pagina: page,
         limit: 20
     });
+    const { data: gruposData } = trpc.grupos.list.useQuery({ pagina: 1, limit: 1000 });
+    const groups = (gruposData?.data ?? []) as Array<{ codigo: number; nome: string }>;
+    const usuarios = (usuariosData?.data ?? []).map((user: any) => ({
+        ...user,
+        grupoNome: groups.find((group) => group.codigo === user.grupoCodigo)?.nome ?? null,
+    }));
 
     const createMutation = trpc.usuarios.create.useMutation({
         onSuccess: () => {
@@ -107,7 +124,9 @@ export function UsuariosPage() {
                 nome: data.nome,
                 email: data.email,
                 atendente: data.atendente,
+                master: data.master,
                 whatsapp: data.whatsapp || null,
+                grupoCodigo: data.grupoCodigo ?? null,
             };
             if (data.senha) updateData.senha = data.senha;
             updateMutation.mutate({ id: editing.id, data: updateData });
@@ -122,7 +141,7 @@ export function UsuariosPage() {
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <DataGrid
                 columns={columns}
-                data={usuariosData?.data || []}
+                data={usuarios}
                 loading={isLoadingList}
                 onRowClick={openEdit}
                 onAdd={openAdd}
@@ -176,10 +195,13 @@ export function UsuariosPage() {
                         email: editing.email || '',
                         senha: '',
                         atendente: editing.atendente ?? false,
+                        master: editing.master ?? false,
                         whatsapp: editing.whatsapp || '',
+                        grupoCodigo: editing.grupoCodigo ?? null,
                     } : undefined}
                     isEditing={!!editing?.id}
                     onSubmit={handleFormSubmit}
+                    groups={groups}
                 />
             </Modal>
 

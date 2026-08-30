@@ -3,6 +3,49 @@ import dayjs from 'dayjs';
 import { trpc } from '@/lib/trpc';
 import { FinanceMovement } from '@/utils/financeUtils';
 
+interface RentalRevenue {
+    id: string;
+    data: string;
+    dataColeta?: string;
+    valorTotal: number;
+    concluida?: boolean;
+    desconto?: number;
+    frete?: number;
+    clientes?: { nome?: string | null } | null;
+    itens?: Array<{
+        quantidade?: number;
+        estoques?: { valorDiaria?: number | null } | null;
+    }>;
+}
+
+export function rentalToFinanceMovement(rental: RentalRevenue): FinanceMovement | null {
+    if (!rental.concluida) return null;
+
+    let value = rental.valorTotal;
+
+    // Compatibilidade com locações antigas cujo total foi zerado ao concluir.
+    if (value <= 0 && rental.dataColeta && rental.itens?.length) {
+        const rentalHours = dayjs(rental.dataColeta).diff(dayjs(rental.data), 'hour');
+        const rentalDays = Math.max(1, Math.ceil(rentalHours / 24));
+        const itemsTotal = rental.itens.reduce(
+            (total, item) => total + (item.estoques?.valorDiaria ?? 0) * (item.quantidade ?? 1),
+            0,
+        );
+        value = itemsTotal * rentalDays * ((100 - (rental.desconto ?? 0)) / 100) + (rental.frete ?? 0);
+    }
+
+    if (value <= 0) return null;
+
+    return {
+        id: rental.id,
+        descricao: `Locação — ${rental.clientes?.nome || 'Cliente'}`,
+        valor: value,
+        tipo: 'LUCRO',
+        data: rental.data,
+        isAgenda: true,
+    };
+}
+
 export function useFinanceData(selectedMonth: number, selectedYear: string) {
     const startOfMonth = useMemo(() => {
         return dayjs(`${selectedYear}-${selectedMonth + 1}-01`).startOf('month');
@@ -80,13 +123,15 @@ export function useFinanceData(selectedMonth: number, selectedYear: string) {
         const spends: Record<string, { nome: string; total: number }> = {};
 
         allAgendasRes.data.forEach((agenda: any) => {
+            const movement = rentalToFinanceMovement(agenda);
+            if (!movement) return;
+
             const cId = agenda.clienteId;
             const nome = agenda.clientes?.nome || 'Cliente Desconhecido';
-            const val = agenda.valorTotal || 0;
             if (!spends[cId]) {
                 spends[cId] = { nome, total: 0 };
             }
-            spends[cId].total += val;
+            spends[cId].total += movement.valor;
         });
 
         const list = Object.values(spends);
@@ -144,16 +189,8 @@ export function useFinanceData(selectedMonth: number, selectedYear: string) {
 
         if (agendasRes?.data) {
             agendasRes.data.forEach((a: any) => {
-                if (a.valorTotal > 0) {
-                    list.push({
-                        id: a.id,
-                        descricao: `Locação — ${a.clientes?.nome || 'Cliente'}`,
-                        valor: a.valorTotal,
-                        tipo: 'LUCRO',
-                        data: a.data,
-                        isAgenda: true,
-                    });
-                }
+                const movement = rentalToFinanceMovement(a);
+                if (movement) list.push(movement);
             });
         }
 

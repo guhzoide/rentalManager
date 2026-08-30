@@ -26,11 +26,11 @@ interface AgendaItem {
     concluida: boolean;
     itens: { id: string; itemId: string; quantidade: number; estoques: { nome: string; valorDiaria?: number } }[];
     cliente: { id: string; nome: string };
-    endereco: { id: string; rua: string; numero: string; cep: string };
+    endereco: { id: string; rua: string; numero: string; bairro?: string | null; cep: string };
 }
 
 interface SelectItem { id: string; nome: string; disponivel?: number; valorDiaria?: number; }
-interface SelectEndereco { id: string; rua: string; numero: string; cep: string; clienteId: string; }
+interface SelectEndereco { id: string; rua: string; numero: string; bairro?: string | null; cep: string; clienteId: string; }
 
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = [
@@ -158,7 +158,13 @@ export function AgendaPage() {
             concluida: a.concluida ?? false,
             itens: a.itens || [],
             cliente: { id: a.clientes?.id, nome: a.clientes?.nome },
-            endereco: { id: a.enderecos?.id, rua: a.enderecos?.rua, numero: a.enderecos?.numero, cep: a.enderecos?.cep }
+            endereco: {
+                id: a.enderecos?.id,
+                rua: a.enderecos?.rua,
+                numero: a.enderecos?.numero,
+                bairro: a.enderecos?.bairro,
+                cep: a.enderecos?.cep,
+            }
         })) as AgendaItem[];
     }, [agendasRes]);
 

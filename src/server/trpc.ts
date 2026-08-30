@@ -71,3 +71,25 @@ const isAuthed = t.middleware(({ next, ctx }) => {
 export const router = t.router;
 export const publicProcedure = t.procedure.use(loggerMiddleware);
 export const protectedProcedure = t.procedure.use(loggerMiddleware).use(isAuthed);
+export const moduleProcedure = (moduleIds: string | string[]) => protectedProcedure.use(
+  t.middleware(async ({ next, ctx }) => {
+    const required = Array.isArray(moduleIds) ? moduleIds : [moduleIds];
+    let allowed = (ctx.session?.user as { allowedPages?: string[] } | undefined)?.allowedPages;
+    if (!allowed) {
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.session!.user.id },
+        select: { grupoCodigo: true, master: true },
+      });
+      if (user?.master) return next();
+      if (!user?.grupoCodigo) allowed = [];
+      else {
+        const group = await ctx.prisma.grupos.findUnique({ where: { codigo: user.grupoCodigo } });
+        allowed = group?.moduloIds ?? [];
+      }
+    }
+    if (allowed && !required.some((moduleId) => allowed.includes(moduleId))) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Seu grupo não possui acesso a este módulo.' });
+    }
+    return next();
+  }),
+);

@@ -9,6 +9,9 @@
 - Feedback ao usuário é feito com `react-toastify`; exclusões passam normalmente por `ConfirmationModal`.
 - Datas são exibidas/manipuladas com `dayjs`; moeda usa `Intl.NumberFormat` com `pt-BR`/BRL.
 - CSS global está em `src/App.css` e `src/index.css`; componentes do Kanvas usam muitos estilos inline.
+- O catálogo de módulos é persistido em `modulos`; não recrie listas hardcoded de páginas, nomes, ícones ou ordem na aplicação.
+- Autorização de documentos do Kanvas deve ser aplicada no servidor por `usuarioId`; esconder registros apenas no frontend não é controle de acesso.
+- `master` é o único bypass das permissões de grupo e da propriedade dos documentos.
 
 ## Checklist antes de editar
 
@@ -17,6 +20,7 @@
 3. Identifique consultas dependentes para invalidar cache após a mutation.
 4. Se houver alteração de dados, avalie relações, cascades e regras de estoque/financeiro.
 5. Não copie segredos de `.env` para código, documentação, testes ou logs.
+6. Ao criar uma tela principal, cadastre seu módulo no banco e defina quais grupos terão acesso.
 
 ## Checklist de entrega
 
@@ -31,17 +35,16 @@
 Estes itens descrevem o estado atual, não mudanças já realizadas:
 
 - `App.tsx` consulta uma empresa por ID fixo. Para multiempresa ou ambiente novo, essa dependência deve ser removida ou configurável.
-- Não há autorização por papel: qualquer sessão autenticada pode chamar procedures protegidas, inclusive manutenção de usuários.
+- Usuários comuns sem grupo não recebem módulos. Garanta que ao menos um usuário esteja marcado como `master` antes de ativar essa política em uma base existente.
 - O servidor impede reserva acima da disponibilidade, mas ainda não verifica conflito temporal entre locações nem define regras de disponibilidade por período.
 - O cliente mistura `principal` e `complemento === 'Principal'` na sincronização de endereço; padronize antes de depender desse marcador em novos fluxos.
 - `transacoes` é independente de `agendas`; o financeiro apenas consolida os dois no front-end.
-- O Kanvas é efêmero: recarregar a página perde documentos. Além disso, sua lista declarada de tabelas inclui `empresa`, mas a página não carrega dados de empresa no objeto usado pelos elementos; valide essa integração antes de expandi-la.
+- Documentos legados do Kanvas sem `usuarioId` ficam acessíveis apenas a usuários `master`; atribua um proprietário por migração caso devam voltar a usuários comuns.
 - Imagens de estoque são URLs externas (`imageUrl` como capa e `imageUrls` como galeria); não há upload ou armazenamento de arquivos configurado.
 - A documentação padrão do `README.md` ainda é a do template Vite. Esta pasta é a referência de contexto do produto até que o README raiz seja atualizado.
 
 ## Decisões que exigem confirmação antes de implementar
 
-- Persistir documentos do Kanvas, anexos ou imagens: requer definição de modelo, armazenamento e permissões.
+- Persistir anexos ou imagens do Kanvas: requer definição de armazenamento e permissões.
 - Multiempresa: o schema atual não associa dados operacionais a uma empresa.
 - Regras de preço (diárias, período, desconto em moeda vs. percentual) e calendário de disponibilidade: a implementação atual não define essas regras por completo.
-- Papéis e permissões: hoje o campo `atendente` é usado pelo catálogo, não como controle de acesso.

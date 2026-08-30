@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { protectedProcedure, router } from '../trpc.js';
+import { moduleProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
 import { type transacoes } from '@prisma/client';
@@ -12,7 +12,7 @@ const transacaoInputSchema = z.object({
 });
 
 export const transacaoRouter = router({
-  list: protectedProcedure
+    list: moduleProcedure(['financeiro', 'canvas'])
     .input(paginationSchema)
     .query(async ({ input }) => {
       if (!input.orderBy) {
@@ -23,7 +23,7 @@ export const transacaoRouter = router({
       return getPaginatedResult<transacoes>(prisma.transacoes, input);
     }),
 
-  create: protectedProcedure
+    create: moduleProcedure('financeiro')
     .input(transacaoInputSchema)
     .mutation(async ({ input }) => {
       return prisma.transacoes.create({
@@ -34,7 +34,7 @@ export const transacaoRouter = router({
       });
     }),
 
-  delete: protectedProcedure
+    delete: moduleProcedure('financeiro')
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       return prisma.transacoes.delete({

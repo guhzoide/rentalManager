@@ -8,6 +8,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import MenuItem from '@mui/material/MenuItem';
 import { useState } from 'react';
 import { usuarioCreateSchema, type UsuarioCreateInput } from '@/lib/schemas';
 import { z } from 'zod';
@@ -27,9 +28,10 @@ interface UsuarioFormProps {
     defaultValues?: Partial<UsuarioFormValues>;
     isEditing: boolean;
     onSubmit: (data: UsuarioFormValues) => void;
+    groups?: Array<{ codigo: number; nome: string }>;
 }
 
-export function UsuarioForm({ defaultValues, isEditing, onSubmit }: UsuarioFormProps) {
+export function UsuarioForm({ defaultValues, isEditing, onSubmit, groups = [] }: UsuarioFormProps) {
     const [showPassword, setShowPassword] = useState(false);
 
     const schema = isEditing ? usuarioEditSchema : usuarioCreateSchema;
@@ -47,7 +49,9 @@ export function UsuarioForm({ defaultValues, isEditing, onSubmit }: UsuarioFormP
             email: '',
             senha: '',
             atendente: false,
+            master: false,
             whatsapp: '',
+            grupoCodigo: null,
             ...defaultValues,
         },
     });
@@ -60,7 +64,9 @@ export function UsuarioForm({ defaultValues, isEditing, onSubmit }: UsuarioFormP
                 email: '',
                 senha: '',
                 atendente: false,
+                master: false,
                 whatsapp: '',
+                grupoCodigo: null,
                 ...defaultValues,
             });
         }
@@ -142,6 +148,47 @@ export function UsuarioForm({ defaultValues, isEditing, onSubmit }: UsuarioFormP
                                         ),
                                     },
                                 }}
+                            />
+                        )}
+                    />
+                </div>
+
+                {/* Grupo de acesso */}
+                <div className="form-group full">
+                    <Controller
+                        name="grupoCodigo"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                select
+                                label="Grupo de acesso"
+                                fullWidth
+                                value={field.value ?? ''}
+                                onChange={(event) => field.onChange(event.target.value === '' ? null : Number(event.target.value))}
+                            >
+                                <MenuItem value="">Sem grupo (sem acesso a módulos)</MenuItem>
+                                {groups.map((group) => <MenuItem key={group.codigo} value={group.codigo}>
+                                    {group.codigo} — {group.nome}
+                                </MenuItem>)}
+                            </TextField>
+                        )}
+                    />
+                </div>
+
+                {/* Acesso master */}
+                <div className="form-group full">
+                    <Controller
+                        name="master"
+                        control={control}
+                        render={({ field }) => (
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={field.value ?? false}
+                                        onChange={(e) => field.onChange(e.target.checked)}
+                                    />
+                                }
+                                label="Master — acesso total a módulos e documentos"
                             />
                         )}
                     />

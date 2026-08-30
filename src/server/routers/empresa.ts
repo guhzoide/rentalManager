@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { protectedProcedure, publicProcedure, router } from '../trpc.js';
+import { moduleProcedure, publicProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { empresaSchema } from '../../lib/schemas.js';
 
@@ -12,12 +12,12 @@ export const empresaRouter = router({
             });
         }),
 
-    listAll: protectedProcedure
+    listAll: moduleProcedure(['empresa', 'canvas'])
         .query(async () => {
             return prisma.empresas.findMany();
         }),
 
-    create: protectedProcedure
+    create: moduleProcedure('empresa')
         .input(empresaSchema)
         .mutation(async ({ input }) => {
             return prisma.empresas.create({
@@ -28,7 +28,7 @@ export const empresaRouter = router({
             });
         }),
 
-    delete: protectedProcedure
+    delete: moduleProcedure('empresa')
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {
             return prisma.empresas.delete({
@@ -36,7 +36,7 @@ export const empresaRouter = router({
             });
         }),
 
-    update: protectedProcedure
+    update: moduleProcedure('empresa')
         .input(z.object({
             id: z.string(),
             data: empresaSchema,

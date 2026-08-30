@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { protectedProcedure, publicProcedure, router } from '../trpc.js';
+import { moduleProcedure, publicProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
 import { estoqueSchema } from '../../lib/schemas.js';
@@ -20,7 +20,7 @@ export const estoqueRouter = router({
       return getPaginatedResult<estoques>(prisma.estoques, input);
     }),
 
-  create: protectedProcedure
+  create: moduleProcedure('estoque')
     .input(estoqueSchema)
     .mutation(async ({ input }) => {
       return prisma.estoques.create({
@@ -33,7 +33,7 @@ export const estoqueRouter = router({
       });
     }),
 
-  update: protectedProcedure
+  update: moduleProcedure('estoque')
     .input(z.object({
       id: z.string(),
       data: estoqueSchema.partial(),
@@ -50,7 +50,7 @@ export const estoqueRouter = router({
       });
     }),
 
-  delete: protectedProcedure
+  delete: moduleProcedure('estoque')
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       return prisma.estoques.delete({

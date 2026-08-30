@@ -21,6 +21,7 @@ interface SelectEndereco {
     id: string;
     rua: string;
     numero: string;
+    bairro?: string | null;
     cep: string;
     clienteId: string;
 }
@@ -245,7 +246,11 @@ export function AgendaForm({
             <div>
                 <Autocomplete
                     options={filteredEnderecos}
-                    getOptionLabel={(opt) => `${opt.rua}, ${opt.numero} — CEP ${opt.cep}`}
+                    getOptionLabel={(opt) => [
+                        `${opt.rua}, ${opt.numero}`,
+                        opt.bairro,
+                        `CEP ${opt.cep}`,
+                    ].filter(Boolean).join(' — ')}
                     value={selectedEndereco}
                     onChange={(_, newVal) => setEnderecoId(newVal?.id ?? '')}
                     isOptionEqualToValue={(opt, val) => opt.id === val.id}

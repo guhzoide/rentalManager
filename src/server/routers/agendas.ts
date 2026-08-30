@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { protectedProcedure, router } from '../trpc.js';
+import { moduleProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
-import { agendaSchema } from '../../lib/schemas.js';
+import { agendaSchema, agendaUpdateSchema } from '../../lib/schemas.js';
 import { type agendas } from '@prisma/client';
 
 async function reserveItems(tx: any, items: { itemId: string; quantidade: number }[]) {
@@ -43,7 +43,7 @@ async function releaseItems(tx: any, items: { itemId: string; quantidade: number
 }
 
 export const agendaRouter = router({
-    list: protectedProcedure
+    list: moduleProcedure(['agenda', 'financeiro', 'canvas'])
         .input(paginationSchema)
         .query(async ({ input }) => {
             return getPaginatedResult<agendas>(prisma.agendas, input, {
@@ -59,7 +59,7 @@ export const agendaRouter = router({
             });
         }),
 
-    create: protectedProcedure
+    create: moduleProcedure('agenda')
         .input(agendaSchema)
         .mutation(async ({ input }) => {
             return prisma.$transaction(async (tx) => {
@@ -98,10 +98,10 @@ export const agendaRouter = router({
             });
         }),
 
-    update: protectedProcedure
+    update: moduleProcedure('agenda')
         .input(z.object({
             id: z.string(),
-            data: agendaSchema.partial(),
+            data: agendaUpdateSchema,
         }))
         .mutation(async ({ input }) => {
             return prisma.$transaction(async (tx) => {
@@ -165,7 +165,7 @@ export const agendaRouter = router({
             });
         }),
 
-    delete: protectedProcedure
+    delete: moduleProcedure('agenda')
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {
             return prisma.$transaction(async (tx) => {
