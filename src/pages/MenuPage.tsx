@@ -51,8 +51,13 @@ const modules = [
         id: 'empresa',
         icon: '🏢',
         title: 'Empresa',
+<<<<<<< Updated upstream
         desc: 'Configure os dados cadastrais e o logotipo',
         color: 'rgba(168, 85, 247, 0.2)',
+=======
+        desc: 'Atualize os dados cadastrais da locadora',
+        color: 'rgba(14, 165, 233, 0.2)',
+>>>>>>> Stashed changes
     },
 ];
 

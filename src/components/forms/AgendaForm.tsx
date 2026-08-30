@@ -149,7 +149,7 @@ export function AgendaForm({
                             const selectedItemObj = itemOptions.find((i) => i.id === selected.itemId) ?? null;
 
                             return (
-                                <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', width: '100%' }}>
+                                <div key={idx} className="agenda-item-row" style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', width: '100%' }}>
                                     {/* Autocomplete Item */}
                                     <div style={{ flex: 1 }}>
                                         <Autocomplete
@@ -185,7 +185,7 @@ export function AgendaForm({
                                     </div>
 
                                     {/* Quantidade */}
-                                    <div style={{ width: '120px' }}>
+                                    <div className="agenda-item-quantity" style={{ width: '120px' }}>
                                         <TextField
                                             label="Qtd"
                                             type="number"

@@ -17,6 +17,8 @@ interface EstoqueItem {
     quantidade: number;
     disponivel: number;
     ativo: boolean;
+    imageUrl?: string | null;
+    imageUrls?: string[];
 }
 
 const columns: Column<EstoqueItem>[] = [
@@ -150,6 +152,8 @@ export function EstoquePage() {
                         quantidade: editing.quantidade ?? 0,
                         disponivel: editing.disponivel ?? 0,
                         ativo: editing.ativo ?? true,
+                        imageUrl: editing.imageUrl || '',
+                        imageUrls: editing.imageUrls || [],
                     } : undefined}
                     onSubmit={handleFormSubmit}
                 />

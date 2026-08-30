@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { protectedProcedure, router } from '../trpc.js';
+import { protectedProcedure, publicProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { empresaSchema } from '../../lib/schemas.js';
 
 export const empresaRouter = router({
-    list: protectedProcedure
+    list: publicProcedure
         .input(z.object({ id: z.string() }))
         .query(async ({ input }) => {
             return prisma.empresas.findUnique({
@@ -48,6 +48,22 @@ export const empresaRouter = router({
         .mutation(async ({ input }) => {
             return prisma.empresas.delete({
                 where: { id: input.id },
+            });
+        }),
+
+    update: protectedProcedure
+        .input(z.object({
+            id: z.string(),
+            data: empresaSchema,
+        }))
+        .mutation(async ({ input }) => {
+            return prisma.empresas.update({
+                where: { id: input.id },
+                data: {
+                    ...input.data,
+                    logoUrl: input.data.logoUrl || null,
+                    updatedAt: new Date(),
+                },
             });
         }),
 });

@@ -7,8 +7,9 @@ import { Modal } from '@/components/ui/Modal';
 import { PropertiesPanel } from '@/components/canvas/propertiesLabel';
 import { ToolbarButton, Divider, Field } from '@/components/canvas/canvasComponent';
 import { emptyDocument, templateNotaFiscal, templateOrdemServico, templateRecibo, newId } from '@/utils/canvasUtils';
+import { EMPRESA_ID } from '@/lib/empresa';
 
-import type { KanvasDoc, KanvasElement, ElementType } from '@/utils/canvasUtils';
+import type { DbData, KanvasDoc, KanvasElement, ElementType } from '@/utils/canvasUtils';
 
 const GRID_SIZE = 10;
 const snap = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE;
@@ -51,6 +52,7 @@ export function CanvasPage() {
     const { data: clientesData } = trpc.clientes.list.useQuery({ limit: 1000 });
     const { data: agendasData } = trpc.agendas.list.useQuery({ limit: 1000 });
     const { data: transacoesData } = trpc.transacoes.list.useQuery({ limit: 1000 });
+<<<<<<< Updated upstream
     const { data: empresasRes } = trpc.empresa.listAll.useQuery();
     const { data: documentosList } = trpc.documentos.list.useQuery();
 
@@ -64,13 +66,20 @@ export function CanvasPage() {
         onSuccess: () => utils.documentos.list.invalidate(),
     });
     const emitirNf = trpc.documentos.emitirNf.useMutation();
+=======
+    const { data: empresaData } = trpc.empresa.list.useQuery({ id: EMPRESA_ID });
+>>>>>>> Stashed changes
 
-    const dbData = {
+    const dbData: DbData = {
         estoque: estoqueData?.data || [],
         clientes: clientesData?.data || [],
         agendas: agendasData?.data || [],
         transacoes: transacoesData?.data || [],
+<<<<<<< Updated upstream
         empresas: empresasRes || [],
+=======
+        empresa: empresaData ? [empresaData] : [],
+>>>>>>> Stashed changes
     };
 
     const [activeDocId, setActiveDocId] = useState<string | null>(null);
@@ -320,7 +329,7 @@ export function CanvasPage() {
             color: 'var(--text-primary)',
         }}>
             {/* Toolbar */}
-            <div style={{
+            <div className="kanvas-toolbar" style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
@@ -389,6 +398,7 @@ export function CanvasPage() {
 
                 <div style={{ flex: 1 }} />
 
+<<<<<<< Updated upstream
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <input
                         value={activeDoc.name}
@@ -398,6 +408,24 @@ export function CanvasPage() {
                     />
                     <button
                         onClick={handleSave}
+=======
+                <ToolbarButton onClick={handlePrint}>🖨️ Gerar PDF</ToolbarButton>
+            </div>
+
+            {/* Document tabs */}
+            <div className="kanvas-document-tabs" style={{
+                display: 'flex',
+                gap: 4,
+                padding: '6px 10px',
+                background: 'var(--bg-secondary)',
+                borderBottom: '1px solid var(--border)',
+                overflowX: 'auto',
+            }}>
+                {documents.map((d) => (
+                    <div
+                        key={d.id}
+                        onClick={() => { setActiveDocId(d.id); setSelectedId(null); }}
+>>>>>>> Stashed changes
                         style={{
                             padding: '6px 16px',
                             borderRadius: 6,

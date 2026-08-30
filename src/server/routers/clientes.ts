@@ -25,6 +25,7 @@ export const clienteRouter = router({
           id: c.id,
           nome: c.nome,
           cpf: c.cpf,
+          email: c.email,
           contato: c.contato,
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,

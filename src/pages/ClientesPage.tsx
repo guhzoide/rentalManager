@@ -3,18 +3,19 @@ import { trpc } from '@/lib/trpc';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from 'react-toastify';
-import { ClientForm } from '@/components/forms/ClientForm';
+import { ClientForm, type ClientFormRecord } from '@/components/forms/ClientForm';
 import { AddressForm } from '@/components/forms/AddressForm';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import type { ClienteInput } from '@/lib/schemas';
 import { getCep } from '@/utils/viacep';
 
 
-interface Cliente {
+interface Cliente extends ClientFormRecord {
     id: string;
     nome: string;
-    cpf?: string | null;
+    email: string;
     contato: string;
+    cpf?: string | null;
 }
 
 interface Endereco {
@@ -32,12 +33,13 @@ const columns: Column<Cliente>[] = [
     { key: 'nome', label: 'Nome' },
     { key: 'cpf', label: 'CPF', width: '130px' },
     { key: 'contato', label: 'Contato', width: '150px' },
+    { key: 'email', label: 'E-mail'}
 ];
 
 export function ClientesPage() {
     const [page, setPage] = useState(1);
     const [modalOpen, setModalOpen] = useState(false);
-    const [editing, setEditing] = useState<Partial<Cliente> | null>(null);
+    const [editing, setEditing] = useState<Cliente | null>(null);
     const [formKey, setFormKey] = useState(0);
 
     const [confirmModal, setConfirmModal] = useState<{
@@ -207,7 +209,7 @@ export function ClientesPage() {
             >
                 <ClientForm
                     key={formKey}
-                    defaultValues={editing ? { nome: editing.nome || '', cpf: editing.cpf || '', contato: editing.contato || '' } : undefined}
+                    cliente={editing}
                     editingId={editing?.id}
                     additionalAddresses={additionalAddresses}
                     isLoadingAddresses={isLoadingAddresses}

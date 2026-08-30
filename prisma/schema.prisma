@@ -33,6 +33,7 @@ model agendas {
   desconto    Float          @default(0)
   frete       Float          @default(0)
   valorTotal  Float          @default(0)
+  concluida   Boolean        @default(false)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   clientes    clientes       @relation(fields: [clienteId], references: [id])
@@ -56,6 +57,7 @@ model clientes {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   cpf       String?
+  email     String?
   agendas   agendas[]
   enderecos enderecos[]
 }
@@ -83,6 +85,7 @@ model estoques {
   altura      Float
   valorDiaria Float
   imageUrl    String?
+  imageUrls   String[]       @default([])
   ativo       Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

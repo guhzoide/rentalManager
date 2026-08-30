@@ -17,6 +17,8 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
         control,
         handleSubmit,
         reset,
+        setValue,
+        watch,
         formState: { errors },
     } = useForm<EstoqueInput>({
         resolver: zodResolver(estoqueSchema),
@@ -29,9 +31,13 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
             quantidade: 0,
             disponivel: 0,
             ativo: true,
+            imageUrl: '',
+            imageUrls: [],
             ...defaultValues,
         },
     });
+
+    const imageUrls = watch('imageUrls') || [];
 
     useEffect(() => {
         reset({
@@ -43,12 +49,14 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
             quantidade: 0,
             disponivel: 0,
             ativo: true,
+            imageUrl: '',
+            imageUrls: [],
             ...defaultValues,
         });
     }, [JSON.stringify(defaultValues)]);
 
     const numField = (
-        name: keyof Omit<EstoqueInput, 'nome' | 'ativo'>,
+        name: 'peso' | 'largura' | 'altura' | 'quantidade' | 'disponivel' | 'valorDiaria',
         label: string,
         adornment: string,
         position: 'start' | 'end' = 'end',
@@ -107,6 +115,59 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
                             />
                         )}
                     />
+                </div>
+
+                <div className="form-group full">
+                    <Controller
+                        name="imageUrl"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                value={field.value || ''}
+                                label="URL da imagem de capa"
+                                variant="outlined"
+                                fullWidth
+                                placeholder="https://exemplo.com/capa.jpg"
+                                error={!!errors.imageUrl}
+                                helperText={errors.imageUrl?.message || 'A imagem de capa será exibida no catálogo.'}
+                            />
+                        )}
+                    />
+                </div>
+
+                <div className="form-group full">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600 }}>Galeria de imagens</span>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setValue('imageUrls', [...imageUrls, ''])}>
+                            + Adicionar imagem
+                        </button>
+                    </div>
+                    {imageUrls.length === 0 ? (
+                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>Nenhuma imagem adicional cadastrada.</p>
+                    ) : imageUrls.map((_, index) => (
+                        <div key={index} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                            <Controller
+                                name={`imageUrls.${index}`}
+                                control={control}
+                                render={({ field: imageField }) => (
+                                    <TextField
+                                        {...imageField}
+                                        label={`Imagem ${index + 1}`}
+                                        variant="outlined"
+                                        size="small"
+                                        fullWidth
+                                        placeholder="https://exemplo.com/imagem.jpg"
+                                        error={!!errors.imageUrls?.[index]}
+                                        helperText={errors.imageUrls?.[index]?.message}
+                                    />
+                                )}
+                            />
+                            <button type="button" className="btn btn-danger btn-sm" onClick={() => setValue('imageUrls', imageUrls.filter((_, imageIndex) => imageIndex !== index))} title="Remover imagem">
+                                ×
+                            </button>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Ativo */}

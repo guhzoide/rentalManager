@@ -4,6 +4,7 @@ import { trpc, trpcClient } from '@/lib/trpc';
 
 import { MenuPage } from '@/pages/MenuPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { EMPRESA_ID } from '@/lib/empresa';
 
 const ClientesPage = lazy(() => import('@/pages/ClientesPage').then(m => ({ default: m.ClientesPage })));
 const EstoquePage = lazy(() => import('@/pages/EstoquePage').then(m => ({ default: m.EstoquePage })));
@@ -60,7 +61,11 @@ const ALL_TABS: Record<string, Tab> = {
     estoque: { id: 'estoque', label: 'Estoque', icon: '📦' },
     usuarios: { id: 'usuarios', label: 'Usuários', icon: '👤' },
     financeiro: { id: 'financeiro', label: 'Financeiro', icon: '💵' },
+<<<<<<< Updated upstream
     canvas: { id: 'canvas', label: 'Canvas', icon: '🖼️' },
+=======
+    kanvas: { id: 'kanvas', label: 'Kanvas', icon: '🖼️' },
+>>>>>>> Stashed changes
     empresa: { id: 'empresa', label: 'Empresa', icon: '🏢' },
 };
 
@@ -71,7 +76,11 @@ const SIDEBAR_ITEMS = [
     { id: 'estoque', label: 'Estoque', icon: '📦' },
     { id: 'usuarios', label: 'Usuários', icon: '👤' },
     { id: 'financeiro', label: 'Financeiro', icon: '💵' },
+<<<<<<< Updated upstream
     { id: 'canvas', label: 'Canvas', icon: '🖼️' },
+=======
+    { id: 'kanvas', label: 'Kanvas', icon: '🖼️' },
+>>>>>>> Stashed changes
     { id: 'empresa', label: 'Empresa', icon: '🏢' },
 ];
 
@@ -82,7 +91,11 @@ function renderPage(id: string) {
         case 'usuarios': return <UsuariosPage />;
         case 'agenda': return <AgendaPage />;
         case 'financeiro': return <FinancePage />;
+<<<<<<< Updated upstream
         case 'canvas': return <CanvasPage />;
+=======
+        case 'kanvas': return <CanvasPage />;
+>>>>>>> Stashed changes
         case 'empresa': return <EmpresaPage />;
         default: return null;
     }
@@ -120,10 +133,14 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
         return () => window.removeEventListener('popstate', checkRoute);
     }, []);
 
+<<<<<<< Updated upstream
     const { data: empresaData, isLoading: isLoadingList } = trpc.empresa.list.useQuery(
         { id: "58f51956-983a-4046-b011-ca785ff41205" },
         { enabled: !!session }
     );
+=======
+    const { data: empresaData, isLoading: isLoadingList } = trpc.empresa.list.useQuery({ id: EMPRESA_ID });
+>>>>>>> Stashed changes
 
     if (isLoadingList) {
         return <PageLoader />;
@@ -169,7 +186,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     }
 
     if (!session) {
-        return <LoginPage onLoginSuccess={() => { }} />;
+        return <LoginPage empresaData={empresaData} onLoginSuccess={() => {}} />;
     }
 
     const navigate = (id: string) => {
@@ -198,6 +215,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     };
 
     const currentSidebarId = activeTab ?? 'menu';
+    const mobileTitle = activeTab ? ALL_TABS[activeTab]?.label ?? 'RentalManager' : 'Menu';
 
     return (
         <div className="app-layout">
@@ -264,7 +282,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                     <button className="mobile-hamburger" onClick={() => setIsSidebarOpen(true)}>
                         ☰
                     </button>
-                    <span className="mobile-title">{empresaData?.nome || 'RentalManager'}</span>
+                    <span className="mobile-title">{mobileTitle}</span>
                 </div>
 
                 {/* Tab bar */}
@@ -291,9 +309,9 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                 )}
 
                 {/* Page content */}
-                <div className="page-content">
+                <main className="page-content">
                     {/* Menu page */}
-                    <div style={{ display: activeTab === null ? 'block' : 'none', height: '100%' }}>
+                    <div className={`page-view${activeTab === null ? ' active' : ''}`}>
                         <MenuPage onNavigate={navigate} />
                     </div>
 
@@ -302,9 +320,13 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                         activeTab === tab.id && (
                             <div
                                 key={tab.id}
-                                style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+                                className="page-view active"
                             >
+<<<<<<< Updated upstream
                                 <div style={{ flex: 1, overflowY: 'auto' }}>
+=======
+                                <div className={`page-view-content${tab.id === 'kanvas' ? ' page-view-content--kanvas' : ''}`}>
+>>>>>>> Stashed changes
                                     <Suspense fallback={<PageLoader />}>
                                         {renderPage(tab.id)}
                                     </Suspense>
@@ -312,7 +334,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                             </div>
                         )
                     ))}
-                </div>
+                </main>
             </div>
             <ToastContainer
                 position="top-right"
@@ -377,4 +399,3 @@ export default function App() {
         </ThemeProvider>
     );
 }
-

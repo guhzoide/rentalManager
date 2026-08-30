@@ -1,0 +1,11 @@
+.git
+.github
+.env
+node_modules
+dist
+ia
+to-do
+api
+Dockerfile
+README.md
+tsconfig.tsbuildinfo

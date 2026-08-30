@@ -11,6 +11,8 @@ interface EstoqueItem {
     quantidade: number;
     disponivel: number;
     ativo: boolean;
+    imageUrl?: string | null;
+    imageUrls?: string[];
 }
 
 interface Atendente {
@@ -30,6 +32,8 @@ function makeWhatsAppLink(phone: string, itemName: string) {
 function ItemModal({ item, atendentes, onClose }: { item: EstoqueItem; atendentes: Atendente[]; onClose: () => void }) {
     const isUnavailable = item.disponivel <= 0;
     const withPhone = atendentes.filter((a) => a.whatsapp);
+    const images = [item.imageUrl, ...(item.imageUrls || [])].filter((url): url is string => Boolean(url));
+    const [activeImage, setActiveImage] = useState(images[0] || '');
 
     return (
         <div className="catalog-modal-overlay" onClick={onClose}>
@@ -41,7 +45,11 @@ function ItemModal({ item, atendentes, onClose }: { item: EstoqueItem; atendente
 
                 {/* Icon banner */}
                 <div className="catalog-modal-banner">
-                    <div className="catalog-modal-icon">🏗</div>
+                    {activeImage ? (
+                        <img src={activeImage} alt={item.nome} style={{ width: '100%', height: '220px', objectFit: 'cover' }} />
+                    ) : (
+                        <div className="catalog-modal-icon">🏗</div>
+                    )}
                     <div className={`catalog-modal-badge ${isUnavailable ? 'unavailable' : 'available'}`}>
                         {isUnavailable ? '● Indisponível' : '● Disponível'}
                     </div>
@@ -50,6 +58,21 @@ function ItemModal({ item, atendentes, onClose }: { item: EstoqueItem; atendente
                 {/* Content */}
                 <div className="catalog-modal-body">
                     <h2 className="catalog-modal-title">{item.nome}</h2>
+
+                    {images.length > 1 && (
+                        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 18 }}>
+                            {images.map((image, index) => (
+                                <button
+                                    key={`${image}-${index}`}
+                                    type="button"
+                                    onClick={() => setActiveImage(image)}
+                                    style={{ padding: 0, border: activeImage === image ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+                                >
+                                    <img src={image} alt={`Imagem ${index + 1} de ${item.nome}`} style={{ width: 64, height: 48, objectFit: 'cover', display: 'block', borderRadius: 4 }} />
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="catalog-modal-specs">
                         <div className="spec-card">
@@ -122,8 +145,10 @@ function CatalogCard({ item, onClick, animationDelay = 0 }: { item: EstoqueItem;
             <div className="catalog-card-shine" />
 
             <div className="catalog-card-header">
-                <div className="catalog-card-icon-wrap">
-                    <span className="catalog-card-icon">🏗</span>
+                <div className="catalog-card-icon-wrap" style={item.imageUrl ? { overflow: 'hidden' } : undefined}>
+                    {item.imageUrl
+                        ? <img src={item.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <span className="catalog-card-icon">🏗</span>}
                 </div>
                 <span className={`catalog-card-status ${isUnavailable ? 'status-unavail' : 'status-avail'}`}>
                     {isUnavailable ? 'Esgotado' : `${item.disponivel} disp.`}
