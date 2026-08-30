@@ -846,11 +846,44 @@ select.form-control {
 
 /* ─── Agenda ─────────────────────────────────────────────────────────────────── */
 .agenda-layout {
-  display: grid;
-  grid-template-columns: 380px 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
   height: 100%;
-  overflow: hidden;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.agenda-list-card {
+  width: 100%;
+}
+
+.agenda-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.agenda-list-heading h3 {
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+.agenda-list-heading p {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.agenda-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .calendar-card {
@@ -859,6 +892,39 @@ select.form-control {
   border-radius: var(--radius-lg);
   overflow: hidden;
   height: fit-content;
+}
+
+.agenda-filter-calendar {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  border: 0;
+  background: transparent;
+}
+
+.agenda-filter-calendar .calendar-header {
+  padding: 0 0 12px;
+}
+
+.agenda-filter-calendar .calendar-grid {
+  padding: 12px 0 0;
+}
+
+.agenda-calendar-period {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agenda-calendar-period .form-control {
+  width: 112px;
+  min-height: 40px;
+  margin: 0;
+  padding: 6px 8px;
+}
+
+.agenda-calendar-period .form-control:last-child {
+  width: 78px;
 }
 
 .calendar-header {
