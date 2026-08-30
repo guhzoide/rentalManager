@@ -1,11 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import Switch from '@mui/material/Switch';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { toast } from 'react-toastify';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
 import { AgendaForm } from '@/components/forms/AgendaForm';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { Modal } from '@/components/ui/Modal';
 import { agendaSchema } from '@/lib/schemas';
 
 dayjs.locale('pt-br');
@@ -70,14 +73,12 @@ function getAgendaColumns(onCompletionChange: (agenda: AgendaItem, concluida: bo
         width: '110px',
         render: (_, row) => (
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} onClick={(event) => event.stopPropagation()}>
-                <input
-                    type="checkbox"
-                    role="switch"
-                    checked={row.concluida}
-                    onKeyDown={(event) => event.stopPropagation()}
+                <Switch
+                    checked={row.concluida ?? false}
+                    style={{ color: 'var(--text-primary)' }}
                     onChange={(event) => onCompletionChange(row, event.target.checked)}
                 />
-                <span>{row.concluida ? 'Sim' : 'Não'}</span>
+                {/* <span>{row.concluida ? 'Sim' : 'Não'}</span> */}
             </label>
         ),
     },
@@ -89,6 +90,7 @@ export function AgendaPage() {
     const [current, setCurrent] = useState(today);
     const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
     const [selectedAgenda, setSelectedAgenda] = useState<AgendaItem | null>(null);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     const utils = trpc.useUtils();
 
@@ -102,7 +104,7 @@ export function AgendaPage() {
     const [desconto, setDesconto] = useState(0);
     const [frete, setFrete] = useState(0);
 
-    const [formMode, setFormMode] = useState<'view' | 'list' | 'new' | 'edit'>('view');
+    const [formMode, setFormMode] = useState<'list' | 'new' | 'edit'>('list');
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     // Confirmation Modal State
@@ -245,27 +247,21 @@ export function AgendaPage() {
         return enderecos.filter((e) => e.clienteId === clienteId);
     }, [clienteId, enderecos]);
 
-    // Mapa de datas com eventos
-    const eventDates = new Set(agendas.map((a) => dayjs(a.data).format('YYYY-MM-DD')));
+    const eventDates = new Set(agendas.map((agenda) => dayjs(agenda.data).format('YYYY-MM-DD')));
 
     const buildCalendarDays = () => {
         const start = current.startOf('month');
         const end = current.endOf('month');
-        const startWeekday = start.day();
-
         const days: { date: dayjs.Dayjs; isCurrentMonth: boolean }[] = [];
 
-        // Dias do mês anterior
-        for (let i = startWeekday - 1; i >= 0; i--) {
-            days.push({ date: start.subtract(i + 1, 'day'), isCurrentMonth: false });
+        for (let index = start.day() - 1; index >= 0; index--) {
+            days.push({ date: start.subtract(index + 1, 'day'), isCurrentMonth: false });
         }
 
-        // Dias do mês atual
-        for (let d = 0; d < end.date(); d++) {
-            days.push({ date: start.add(d, 'day'), isCurrentMonth: true });
+        for (let day = 0; day < end.date(); day++) {
+            days.push({ date: start.add(day, 'day'), isCurrentMonth: true });
         }
 
-        // Completar 6 semanas
         while (days.length % 7 !== 0) {
             days.push({ date: days[days.length - 1].date.add(1, 'day'), isCurrentMonth: false });
         }
@@ -274,24 +270,14 @@ export function AgendaPage() {
     };
 
     const handleDayClick = (date: dayjs.Dayjs) => {
-        setSelectedDate(date);
-        setFormMode('list');
-    };
-
-    const changeCalendarMonth = (nextMonth: dayjs.Dayjs) => {
-        const monthStart = nextMonth.startOf('month');
-        setCurrent(monthStart);
-        setSelectedDate((date) => date
-            ? monthStart.date(Math.min(date.date(), monthStart.daysInMonth()))
-            : null);
-    };
-
-    const handleDateSelection = (value: string) => {
-        if (!value) return;
-        const date = dayjs(value);
         setCurrent(date.startOf('month'));
         setSelectedDate(date);
         setFormMode('list');
+        setIsCalendarOpen(false);
+    };
+
+    const changeCalendarMonth = (nextMonth: dayjs.Dayjs) => {
+        setCurrent(nextMonth.startOf('month'));
     };
 
     const handleAddClick = () => {
@@ -302,10 +288,9 @@ export function AgendaPage() {
         setObservacao('');
         setDesconto(0);
         setFrete(0);
-        if (selectedDate) {
-            setDataStr(selectedDate.hour(8).minute(0).format('YYYY-MM-DDTHH:mm'));
-            setDataColetaStr(selectedDate.hour(18).minute(0).format('YYYY-MM-DDTHH:mm'));
-        }
+        const initialDate = selectedDate ?? today;
+        setDataStr(initialDate.hour(8).minute(0).format('YYYY-MM-DDTHH:mm'));
+        setDataColetaStr(initialDate.hour(18).minute(0).format('YYYY-MM-DDTHH:mm'));
         setFormMode('new');
     };
 
@@ -377,151 +362,168 @@ export function AgendaPage() {
 
     const days = buildCalendarDays();
     const yearOptions = Array.from({ length: 11 }, (_, index) => today.year() - 5 + index);
+    const filteredAgendas = selectedDate
+        ? agendas.filter((agenda) => dayjs(agenda.data).isSame(selectedDate, 'day'))
+        : agendas;
 
     return (
         <div className="page-inner">
             <div className="page-header">
                 <h2>📅 Agenda</h2>
-                <p>Clique em uma data para ver ou criar um agendamento</p>
+                <p>Acompanhe e gerencie as locações do mês</p>
             </div>
 
             <div className="agenda-layout">
-                {/* Calendar */}
-                <div className="calendar-card">
-                    <div className="calendar-header">
-                        <button
-                            className="btn btn-ghost btn-sm btn-icon"
-                            onClick={() => changeCalendarMonth(current.subtract(1, 'month'))}
-                        >
-                            ‹
-                        </button>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <select
-                                className="form-control"
-                                aria-label="Mês da agenda"
-                                value={current.month()}
-                                onChange={(event) => changeCalendarMonth(current.month(Number(event.target.value)))}
-                                style={{ width: 118, margin: 0, padding: '5px 7px' }}
-                            >
-                                {MONTHS.map((month, index) => <option key={month} value={index}>{month}</option>)}
-                            </select>
-                            <select
-                                className="form-control"
-                                aria-label="Ano da agenda"
-                                value={current.year()}
-                                onChange={(event) => changeCalendarMonth(current.year(Number(event.target.value)))}
-                                style={{ width: 78, margin: 0, padding: '5px 7px' }}
-                            >
-                                {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
-                            </select>
-                        </div>
-                        <button
-                            className="btn btn-ghost btn-sm btn-icon"
-                            onClick={() => changeCalendarMonth(current.add(1, 'month'))}
-                        >
-                            ›
-                        </button>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 8, padding: '0 12px 12px' }}>
-                        <input
-                            className="form-control"
-                            type="date"
-                            aria-label="Selecionar dia da agenda"
-                            value={selectedDate?.format('YYYY-MM-DD') ?? ''}
-                            onChange={(event) => handleDateSelection(event.target.value)}
-                            style={{ margin: 0, flex: 1 }}
-                        />
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleDateSelection(today.format('YYYY-MM-DD'))}>
-                            Hoje
-                        </button>
-                    </div>
-
-                    <div className="calendar-grid">
-                        <div className="calendar-weekdays">
-                            {DAYS.map((d) => (
-                                <div key={d} className="calendar-weekday">{d}</div>
-                            ))}
-                        </div>
-
-                        <div className="calendar-days">
-                            {days.map(({ date, isCurrentMonth }, idx) => {
-                                const key = date.format('YYYY-MM-DD');
-                                const isToday = date.isSame(today, 'day');
-                                const isSelected = selectedDate?.isSame(date, 'day');
-                                const hasEvent = eventDates.has(key);
-
-                                let cls = 'calendar-day';
-                                if (!isCurrentMonth) cls += ' other-month';
-                                if (isToday) cls += ' today';
-                                if (isSelected) cls += ' selected';
-                                if (hasEvent) cls += ' has-event';
-
-                                return (
-                                    <button
-                                        key={idx}
-                                        className={cls}
-                                        onClick={() => handleDayClick(date)}
-                                    >
-                                        {date.date()}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-
-                {/* List */}
-                {formMode === 'list' && selectedDate && (
-                    <div className="agenda-form-card mobile-modal">
-                        <div className="agenda-form-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {formMode === 'list' && (
+                    <section className="agenda-form-card agenda-list-card">
+                        <div className="agenda-list-heading">
                             <div>
-                                Agendamentos do Dia
-                                {' — '}
-                                <span style={{ color: 'var(--accent-hover)', fontWeight: 400 }}>
-                                    {selectedDate.format('DD/MM/YYYY')}
-                                </span>
+                                <h3>Locações</h3>
+                                <p>
+                                    {selectedDate
+                                        ? `Exibindo locações de ${selectedDate.format('DD/MM/YYYY')}`
+                                        : `${MONTHS[current.month()]} de ${current.year()}`}
+                                </p>
                             </div>
-                            <button 
-                                onClick={() => setFormMode('view')}
-                                style={{ 
-                                    background: 'var(--danger-light)', 
-                                    color: 'var(--danger)', 
-                                    border: 'none', 
-                                    borderRadius: '50%', 
-                                    width: 32, 
-                                    height: 32, 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center',
-                                    fontSize: 18,
-                                    cursor: 'pointer' 
-                                }}
-                            >
-                                ×
-                            </button>
+                            <div className="agenda-filter-actions">
+                                {selectedDate && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => setSelectedDate(null)}
+                                    >
+                                        Limpar filtro
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className={`btn ${selectedDate ? 'btn-primary' : 'btn-ghost'} btn-icon`}
+                                    onClick={() => setIsCalendarOpen(true)}
+                                    aria-label="Filtrar locações por data"
+                                    title="Filtrar por data"
+                                >
+                                    <FilterAltIcon fontSize="small" />
+                                </button>
+                            </div>
                         </div>
-                        <div style={{ marginTop: 16 }}>
-                            <DataGrid
-                                columns={agendaColumns}
-                                data={agendas.filter(a => dayjs(a.data).format('YYYY-MM-DD') === selectedDate.format('YYYY-MM-DD'))}
-                                onAdd={handleAddClick}
-                                onRowClick={handleEditClick}
-                                emptyText="Nenhum agendamento para esta data."
-                            />
-                        </div>
-                    </div>
+                        <DataGrid
+                            columns={agendaColumns}
+                            data={filteredAgendas}
+                            onAdd={handleAddClick}
+                            onRowClick={handleEditClick}
+                            emptyText={selectedDate
+                                ? 'Nenhuma locação encontrada para esta data.'
+                                : 'Nenhuma locação encontrada neste mês.'}
+                        />
+                    </section>
                 )}
 
+                <Modal
+                    title="Filtrar locações por data"
+                    open={isCalendarOpen}
+                    onClose={() => setIsCalendarOpen(false)}
+                    size="sm"
+                    footer={(
+                        <>
+                            <button
+                                type="button"
+                                className="btn btn-ghost"
+                                onClick={() => {
+                                    setSelectedDate(null);
+                                    setIsCalendarOpen(false);
+                                }}
+                            >
+                                Limpar filtro
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => handleDayClick(today)}
+                            >
+                                Hoje
+                            </button>
+                        </>
+                    )}
+                >
+                    <div className="calendar-card agenda-filter-calendar">
+                        <div className="calendar-header">
+                            <button
+                                type="button"
+                                className="btn btn-ghost btn-sm btn-icon"
+                                onClick={() => changeCalendarMonth(current.subtract(1, 'month'))}
+                                aria-label="Mês anterior"
+                            >
+                                ‹
+                            </button>
+                            <div className="agenda-calendar-period">
+                                <select
+                                    className="form-control"
+                                    aria-label="Mês da agenda"
+                                    value={current.month()}
+                                    onChange={(event) => changeCalendarMonth(current.month(Number(event.target.value)))}
+                                >
+                                    {MONTHS.map((month, index) => <option key={month} value={index}>{month}</option>)}
+                                </select>
+                                <select
+                                    className="form-control"
+                                    aria-label="Ano da agenda"
+                                    value={current.year()}
+                                    onChange={(event) => changeCalendarMonth(current.year(Number(event.target.value)))}
+                                >
+                                    {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
+                                </select>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn btn-ghost btn-sm btn-icon"
+                                onClick={() => changeCalendarMonth(current.add(1, 'month'))}
+                                aria-label="Próximo mês"
+                            >
+                                ›
+                            </button>
+                        </div>
+                        <div className="calendar-grid">
+                            <div className="calendar-weekdays">
+                                {DAYS.map((day) => <div key={day} className="calendar-weekday">{day}</div>)}
+                            </div>
+                            <div className="calendar-days">
+                                {days.map(({ date, isCurrentMonth }, index) => {
+                                    const key = date.format('YYYY-MM-DD');
+                                    const isToday = date.isSame(today, 'day');
+                                    const isSelected = selectedDate?.isSame(date, 'day');
+                                    const hasEvent = eventDates.has(key);
+                                    let className = 'calendar-day';
+                                    if (!isCurrentMonth) className += ' other-month';
+                                    if (isToday) className += ' today';
+                                    if (isSelected) className += ' selected';
+                                    if (hasEvent) className += ' has-event';
+
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={index}
+                                            className={className}
+                                            onClick={() => handleDayClick(date)}
+                                            aria-label={`Filtrar por ${date.format('DD/MM/YYYY')}`}
+                                        >
+                                            {date.date()}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+
                 {/* Form */}
-                {(formMode === 'new' || formMode === 'edit') && selectedDate && (
+                {(formMode === 'new' || formMode === 'edit') && (
                     <div className="agenda-form-card mobile-modal">
                         <div className="agenda-form-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 {formMode === 'new' ? '➕ Novo Agendamento' : '✏️ Editar Agendamento'}
                                 {' — '}
                                 <span style={{ color: 'var(--accent-hover)', fontWeight: 400 }}>
-                                    {selectedDate.format('DD/MM/YYYY')}
+                                    {dataStr ? dayjs(dataStr).format('DD/MM/YYYY') : 'Data não definida'}
                                 </span>
                             </div>
                             <button 
@@ -600,15 +602,6 @@ export function AgendaPage() {
                     </div>
                 )}
 
-                {formMode === 'view' && (
-                    <div className="agenda-form-card mobile-hide" style={{ alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
-                        <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                            <div style={{ fontSize: 48, marginBottom: 12 }}>📅</div>
-                            <p>Clique em uma data no calendário</p>
-                            <p style={{ fontSize: 12, marginTop: 4 }}>Datas com <span style={{ color: 'var(--success)' }}>●</span> possuem agendamentos</p>
-                        </div>
-                    </div>
-                )}
                 <ConfirmationModal
                     isOpen={confirmModal.isOpen}
                     title={confirmModal.title}
