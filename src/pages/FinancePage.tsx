@@ -248,11 +248,11 @@ export function FinancePage() {
 
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
                         gap: '24px'
                     }}>
-                        {/* 1. BRINQUEDOS MAIS ALUGADOS (Vertical BarChart) */}
-                        <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* Rankings use the full row so labels and values remain readable as data grows. */}
+                        <div className="card" style={{ gridColumn: '1 / -1', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     🧸 Brinquedos Mais Alugados
@@ -262,17 +262,17 @@ export function FinancePage() {
                                 </p>
                             </div>
 
-                            <div style={{ width: '100%', height: '260px' }}>
+                            <div style={{ width: '100%', height: '340px' }}>
                                 {mostRentedToys.length === 0 ? (
                                     <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', paddingTop: '100px' }}>Nenhum aluguel encontrado no sistema.</p>
                                 ) : (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={mostRentedToys} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <BarChart data={mostRentedToys} margin={{ top: 10, right: 16, left: 0, bottom: 44 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-                                            <XAxis dataKey="nome" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                                            <XAxis dataKey="nome" stroke="var(--text-muted)" fontSize={11} tickLine={false} interval={0} angle={-18} textAnchor="end" height={60} />
                                             <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} allowDecimals={false} />
                                             <RechartsTooltip content={<CustomCountTooltip />} />
-                                            <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} name="Aluguéis">
+                                            <Bar dataKey="count" fill="#6366f1" radius={[6, 6, 0, 0]} name="Aluguéis" maxBarSize={56}>
                                                 {mostRentedToys.map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff'][index % 5]} />
                                                 ))}
@@ -283,8 +283,8 @@ export function FinancePage() {
                             </div>
                         </div>
 
-                        {/* 2. CLIENTES QUE MAIS GASTAM (Horizontal BarChart) */}
-                        <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* 2. CLIENTES QUE MAIS GASTAM (Vertical BarChart) */}
+                        <div className="card" style={{ gridColumn: '1 / -1', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     👑 Clientes VIP (Maior Faturamento)
@@ -294,17 +294,17 @@ export function FinancePage() {
                                 </p>
                             </div>
 
-                            <div style={{ width: '100%', height: '260px' }}>
+                            <div style={{ width: '100%', height: '340px' }}>
                                 {topSpendingClients.length === 0 ? (
                                     <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', paddingTop: '100px' }}>Sem dados de faturamento.</p>
                                 ) : (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={topSpendingClients} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                                        <BarChart data={topSpendingClients} margin={{ top: 10, right: 16, left: 0, bottom: 44 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-                                            <XAxis type="number" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                                            <YAxis dataKey="nome" type="category" stroke="var(--text-muted)" fontSize={10} tickLine={false} width={100} />
+                                            <XAxis dataKey="nome" stroke="var(--text-muted)" fontSize={11} tickLine={false} interval={0} angle={-18} textAnchor="end" height={60} />
+                                            <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} />
                                             <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                                            <Bar dataKey="total" fill="#10b981" radius={[0, 4, 4, 0]} name="Total Gasto">
+                                            <Bar dataKey="total" fill="#10b981" radius={[6, 6, 0, 0]} name="Total Gasto" maxBarSize={56}>
                                                 {topSpendingClients.map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'][index % 5]} />
                                                 ))}

@@ -5,6 +5,7 @@
 O `Dockerfile` gera uma imagem que entrega a SPA Vite e a API Hono no mesmo processo Bun, na porta `3001`. O servidor entrega os assets de `dist/` e usa `index.html` como fallback para as rotas da SPA.
 
 É necessário fornecer, no ambiente do container, `DATABASE_URL`, `BETTER_AUTH_SECRET` e `BETTER_AUTH_URL`.
+Ao iniciar, a imagem aplica automaticamente as migrations pendentes antes de subir a API.
 
 Exemplo local:
 
@@ -32,12 +33,12 @@ git push origin <tag>
   → GHCR
 ```
 
-Cada publicação produz imagens independentes:
+Cada publicação produz tags independentes no padrão `rentalManger-<tag-git>-<arquitetura>`:
 
-- `ghcr.io/<owner>/<repo>:amd64-latest`
-- `ghcr.io/<owner>/<repo>:arm64-latest`
+- `ghcr.io/<owner>/<repo>:rentalManger-v1.0.0-amd64`
+- `ghcr.io/<owner>/<repo>:rentalManger-v1.0.0-arm64`
 
-Também são criadas tags imutáveis no formato `<arquitetura>-<commit-sha>`. Para baixar uma imagem privada no servidor de destino, autentique o Docker no GHCR com um token que tenha `read:packages`.
+Também são atualizados os aliases `rentalManger-latest-amd64` e `rentalManger-latest-arm64`. Para baixar uma imagem privada no servidor de destino, autentique o Docker no GHCR com um token que tenha `read:packages`.
 
 ## Publicar uma versão
 
@@ -56,10 +57,16 @@ Escolha a imagem compatível com a arquitetura do host:
 
 ```bash
 # Servidor x86_64/AMD64
-docker pull ghcr.io/guhzoide/rentalmanager:amd64-latest
+docker pull ghcr.io/guhzoide/rentalmanager:rentalManger-latest-amd64
 
 # Servidor ARM64, como Raspberry Pi ou Graviton
-docker pull ghcr.io/guhzoide/rentalmanager:arm64-latest
+docker pull ghcr.io/guhzoide/rentalmanager:rentalManger-latest-arm64
 ```
 
 O container escuta na porta `3001`; use `GET /health` para health checks. A configuração não possui mais dependências, adaptadores ou URLs da Vercel.
+
+## Stack no Portainer
+
+O `docker-compose.yml` da raiz executa a imagem publicada no GHCR junto de um PostgreSQL 17 com volume persistente. Antes do deploy, configure `BETTER_AUTH_SECRET` e ajuste `BETTER_AUTH_URL` para a URL pública. Em hosts ARM64, defina `IMAGE_TAG=rentalManger-latest-arm64`; o padrão é `rentalManger-latest-amd64`. Para fixar uma versão, use por exemplo `IMAGE_TAG=rentalManger-v1.0.0-amd64`.
+
+Se o pacote no GHCR for privado, cadastre `ghcr.io` em **Registries** no Portainer usando um token do GitHub com `read:packages` e selecione esse registry ao criar a stack.

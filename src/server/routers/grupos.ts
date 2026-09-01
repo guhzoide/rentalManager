@@ -19,15 +19,8 @@ export const grupoRouter = router({
             throw new TRPCError({ code: 'BAD_REQUEST', message: 'Um ou mais módulos são inválidos.' });
         }
 
-        return prisma.$transaction(async (tx) => {
-            const counter = await tx.contadores.upsert({
-                where: { id: 'grupos' },
-                create: { id: 'grupos', valor: 1 },
-                update: { valor: { increment: 1 } },
-            });
-            return tx.grupos.create({
-                data: { ...input, moduloIds: [...new Set(input.moduloIds)], codigo: counter.valor },
-            });
+        return prisma.grupos.create({
+            data: { ...input, moduloIds: [...new Set(input.moduloIds)] },
         });
     }),
 
