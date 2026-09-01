@@ -1,37 +1,16 @@
 services:
-  database:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
-      POSTGRES_DB: ${POSTGRES_DB:-dbdev}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     image: ghcr.io/guhzoide/rentalmanager:${IMAGE_TAG:-rentalManger-latest-amd64}
     restart: unless-stopped
-    depends_on:
-      database:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-123}@database:5432/${POSTGRES_DB:-dbdev}?schema=public
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Defina BETTER_AUTH_SECRET no Portainer}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3001}
+      DATABASE_URL: postgresql://admin:123@postgresql:5432/dbdev?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
     ports:
       - "${APP_PORT:-3001}:3001"
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+    networks:
+      - proxy-localhost-network
 
-volumes:
-  postgres_data:
+networks:
+  proxy-localhost-network:
+    external: true
