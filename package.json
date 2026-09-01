@@ -8,6 +8,7 @@
     "dev:server": "bun --watch src/server/index.ts",
     "build": "prisma generate && tsc -b && vite build",
     "lint": "eslint .",
+    "migrate:data": "bun scripts/migrate-mongodb-to-postgres.ts",
     "preview": "vite preview",
     "postinstall": "bun patch-es-toolkit.js"
   },
@@ -32,7 +33,6 @@
     "dayjs": "^1.11.20",
     "dotenv": "^17.4.2",
     "hono": "^4.12.18",
-    "mongodb": "^7.2.0",
     "pg": "^8.20.0",
     "prisma": "6",
     "react": "^19.2.5",
@@ -54,6 +54,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
+    "mongodb": "^7.2.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.58.2",

@@ -24,7 +24,7 @@ if (baseURL && !origins.includes(baseURL)) {
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
-        provider: "mongodb",
+        provider: "postgresql",
     }),
     emailAndPassword: {
         enabled: true,

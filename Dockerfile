@@ -25,4 +25,4 @@ COPY --from=build /app/dist ./dist
 USER bun
 EXPOSE 3001
 
-CMD ["bun", "src/server/index.ts"]
+CMD ["sh", "-c", "bunx prisma migrate deploy && exec bun src/server/index.ts"]

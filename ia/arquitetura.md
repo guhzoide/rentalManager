@@ -9,7 +9,7 @@
 | Estado remoto | TanStack React Query via tRPC React | Queries, mutations e invalidação de cache |
 | Back-end | Bun, Hono e tRPC 11 | API tipada em `/trpc/*` |
 | Autenticação | Better Auth | Sessão por cookie e login e senha |
-| Dados | MongoDB, Prisma 6 | Persistência e relações do domínio |
+| Dados | PostgreSQL 17, Prisma 6 | Persistência e relações do domínio; textos usam `citext` |
 | Validação | Zod | Contratos de formulários e procedures |
 
 ## Estrutura principal
@@ -29,7 +29,7 @@ src/
 │   ├── db.ts               # PrismaClient
 │   └── index.ts            # App Hono / entradas HTTP
 └── utils/                  # Utilitários, incluindo o modelo do Kanvas
-prisma/schema.prisma        # Esquema MongoDB/Prisma
+prisma/schema.prisma        # Esquema PostgreSQL/Prisma
 ```
 
 O alias `@/` aponta para `src/`.
@@ -48,14 +48,14 @@ tRPC router + autenticação (`src/server/trpc.ts`)
    ▼
 Prisma Client
    ▼
-MongoDB
+PostgreSQL
 ```
 
 `App.tsx` não usa um roteador dedicado: as telas internas são abertas como abas em estado local. A exceção é `/catalog`, identificada manualmente por `window.location.pathname`; essa página é pública. As páginas pesadas são carregadas com `lazy`/`Suspense`.
 
 ## Execução local
 
-Pré-requisitos: Bun, acesso ao MongoDB e um `.env` configurado.
+Pré-requisitos: Bun, acesso ao PostgreSQL e um `.env` configurado.
 
 | Comando | Efeito |
 | --- | --- |
@@ -65,7 +65,7 @@ Pré-requisitos: Bun, acesso ao MongoDB e um `.env` configurado.
 | `bun run lint` | Executa ESLint |
 | `bun run preview` | Serve o bundle de produção |
 
-Variáveis necessárias, sem registrar valores: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`. A URL de banco deve apontar para MongoDB, pois o datasource Prisma é `mongodb`.
+Variáveis necessárias, sem registrar valores: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`. A URL de banco deve usar o protocolo `postgresql://` ou `postgres://`.
 
 ## HTTP, sessão e autorização
 

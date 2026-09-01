@@ -13,11 +13,10 @@
 | `transacoes` | Fluxo financeiro manual | descrição, valor, `LUCRO`/`GASTO` e data |
 | `modulos` | Catálogo de telas controladas por acesso | identificador estável, nome, descrição, ícone, ordem e status ativo |
 | `grupos` | Grupos de acesso | código sequencial, nome, descrição e IDs dos módulos liberados |
-| `contadores` | Sequências numéricas no MongoDB | mantém o próximo código autoincremental dos grupos |
 | `documentos` | Documentos persistidos do Kanvas | conteúdo visual e vínculo opcional com o usuário proprietário |
 | `User`, `Session`, `Account`, `Verification` | Better Auth | tabelas/coleções usadas pela autenticação |
 
-Os IDs são strings UUID mapeadas para `_id` no MongoDB. `createdAt` e `updatedAt` são controlados pelos modelos; várias mutations também definem `updatedAt` explicitamente.
+Os IDs são strings UUID persistidas como `citext` no PostgreSQL. `createdAt` e `updatedAt` são controlados pelos modelos; várias mutations também definem `updatedAt` explicitamente.
 
 ## Regras de negócio essenciais
 
@@ -45,7 +44,7 @@ Usuários comuns recebem exclusivamente os módulos ativos liberados pelo grupo.
 
 A coleção `modulos` é a única fonte de dados para o catálogo de páginas. Identificador, nome, descrição, ícone, ordem e status não devem ser mantidos em arrays hardcoded no frontend ou no backend. Ao adicionar uma página, persista primeiro seu módulo no banco; a sessão e a navegação devem carregar os metadados dessa coleção. O código mantém apenas o vínculo técnico inevitável entre o identificador persistido e o componente React responsável por renderizar a página.
 
-Como o MongoDB não oferece `autoincrement()` no Prisma, `grupos.codigo` é preenchido por incremento atômico na coleção `contadores`. O código é imutável. Um grupo com usuários vinculados não pode ser excluído.
+`grupos.codigo` usa uma sequência `autoincrement()` nativa do PostgreSQL. O código é imutável. Um grupo com usuários vinculados não pode ser excluído.
 
 ### Catálogo público
 

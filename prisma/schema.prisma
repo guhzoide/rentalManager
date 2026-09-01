@@ -1,112 +1,112 @@
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext]
 }
 
 model empresas {
-  id          String    @id @default(uuid()) @map("_id")
-  nome        String
-  logoUrl     String?
-  cnpj        String?
-  telefone    String?
-  logradouro  String?
-  numero      String?
-  cep         String?
-  bairro      String?
-  complemento String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id          String   @id @default(uuid()) @db.Citext
+  nome        String   @db.Citext
+  logoUrl     String?  @db.Citext
+  cnpj        String?  @db.Citext
+  telefone    String?  @db.Citext
+  logradouro  String?  @db.Citext
+  numero      String?  @db.Citext
+  cep         String?  @db.Citext
+  bairro      String?  @db.Citext
+  complemento String?  @db.Citext
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model agendas {
-  id          String         @id @default(uuid()) @map("_id")
-  data        DateTime
-  clienteId   String
-  enderecoId  String
-  observacao  String?
-  dataColeta  DateTime       @default(now())
-  desconto    Float          @default(0)
-  frete       Float          @default(0)
-  valorTotal  Float          @default(0)
-  concluida   Boolean        @default(false)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  clientes    clientes       @relation(fields: [clienteId], references: [id])
-  enderecos   enderecos      @relation(fields: [enderecoId], references: [id])
-  itens       agenda_itens[]
+  id         String         @id @default(uuid()) @db.Citext
+  data       DateTime
+  clienteId  String         @db.Citext
+  enderecoId String         @db.Citext
+  observacao String?        @db.Citext
+  dataColeta DateTime       @default(now())
+  desconto   Float          @default(0)
+  frete      Float          @default(0)
+  valorTotal Float          @default(0)
+  concluida  Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  clientes   clientes       @relation(fields: [clienteId], references: [id])
+  enderecos  enderecos      @relation(fields: [enderecoId], references: [id])
+  itens      agenda_itens[]
 }
 
 model agenda_itens {
-  id         String   @id @default(uuid()) @map("_id")
-  agendaId   String
-  itemId     String
+  id         String   @id @default(uuid()) @db.Citext
+  agendaId   String   @db.Citext
+  itemId     String   @db.Citext
   quantidade Int      @default(1)
   agendas    agendas  @relation(fields: [agendaId], references: [id], onDelete: Cascade)
   estoques   estoques @relation(fields: [itemId], references: [id])
 }
 
 model clientes {
-  id        String      @id @default(uuid()) @map("_id")
-  nome      String
-  contato   String
+  id        String      @id @default(uuid()) @db.Citext
+  nome      String      @db.Citext
+  contato   String      @db.Citext
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
-  cpf       String?
-  email     String?
+  cpf       String?     @db.Citext
+  email     String?     @db.Citext
   agendas   agendas[]
   enderecos enderecos[]
 }
 
 model enderecos {
-  id          String    @id @default(uuid()) @map("_id")
-  clienteId   String
-  cep         String
-  rua         String
-  numero      String
-  complemento String?
+  id          String    @id @default(uuid()) @db.Citext
+  clienteId   String    @db.Citext
+  cep         String    @db.Citext
+  rua         String    @db.Citext
+  numero      String    @db.Citext
+  complemento String?   @db.Citext
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  bairro      String?
+  bairro      String?   @db.Citext
   principal   Boolean   @default(false)
   agendas     agendas[]
   clientes    clientes  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
 
 model estoques {
-  id          String    @id @default(uuid()) @map("_id")
-  nome        String
+  id          String         @id @default(uuid()) @db.Citext
+  nome        String         @db.Citext
   peso        Float
   largura     Float
   altura      Float
   valorDiaria Float
-  imageUrl    String?
-  imageUrls   String[]       @default([])
-  ativo       Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  imageUrl    String?        @db.Citext
+  imageUrls   String[]       @default([]) @db.Citext
+  ativo       Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   quantidade  Int            @default(0)
   disponivel  Int            @default(0)
   itens       agenda_itens[]
 }
 
-
 model User {
-  id            String    @id @map("_id")
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  atendente     Boolean   @default(false)
-  master        Boolean   @default(false)
-  whatsapp      String?
+  id            String       @id @default(uuid()) @db.Citext
+  name          String       @db.Citext
+  email         String       @db.Citext
+  emailVerified Boolean      @default(false)
+  image         String?      @db.Citext
+  atendente     Boolean      @default(false)
+  master        Boolean      @default(false)
+  whatsapp      String?      @db.Citext
   grupoCodigo   Int?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   sessions      Session[]
   accounts      Account[]
   documentos    documentos[]
@@ -116,41 +116,35 @@ model User {
 }
 
 model modulos {
-  id          String   @id @map("_id")
-  nome        String
-  descricao   String?
-  icone       String
-  ordem       Int
-  ativo       Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @db.Citext
+  nome      String   @db.Citext
+  descricao String?  @db.Citext
+  icone     String   @db.Citext
+  ordem     Int
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model grupos {
-  id          String   @id @default(uuid()) @map("_id")
-  codigo      Int      @unique
-  nome        String
-  descricao   String?
-  moduloIds   String[] @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model contadores {
-  id        String   @id @map("_id")
-  valor     Int      @default(0)
+  id        String   @id @default(uuid()) @db.Citext
+  codigo    Int      @unique @default(autoincrement())
+  nome      String   @db.Citext
+  descricao String?  @db.Citext
+  moduloIds String[] @default([]) @db.Citext
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Session {
-  id        String   @id @map("_id")
+  id        String   @id @default(uuid()) @db.Citext
   expiresAt DateTime
-  token     String
+  token     String   @db.Citext
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
+  ipAddress String?  @db.Citext
+  userAgent String?  @db.Citext
+  userId    String   @db.Citext
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
@@ -159,18 +153,18 @@ model Session {
 }
 
 model Account {
-  id                    String    @id @map("_id")
-  accountId             String
-  providerId            String
-  userId                String
+  id                    String    @id @default(uuid()) @db.Citext
+  accountId             String    @db.Citext
+  providerId            String    @db.Citext
+  userId                String    @db.Citext
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
+  accessToken           String?   @db.Citext
+  refreshToken          String?   @db.Citext
+  idToken               String?   @db.Citext
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
+  scope                 String?   @db.Citext
+  password              String?   @db.Citext
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -179,9 +173,9 @@ model Account {
 }
 
 model Verification {
-  id         String   @id @map("_id")
-  identifier String
-  value      String
+  id         String   @id @default(uuid()) @db.Citext
+  identifier String   @db.Citext
+  value      String   @db.Citext
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -191,20 +185,20 @@ model Verification {
 }
 
 model transacoes {
-  id        String   @id @default(uuid()) @map("_id")
-  descricao String
+  id        String   @id @default(uuid()) @db.Citext
+  descricao String   @db.Citext
   valor     Float
-  tipo      String
+  tipo      String   @db.Citext
   data      DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model documentos {
-  id        String   @id @default(uuid()) @map("_id")
-  nome      String
+  id        String   @id @default(uuid()) @db.Citext
+  nome      String   @db.Citext
   content   Json
-  usuarioId String?
+  usuarioId String?  @db.Citext
   usuario   User?    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
