@@ -8,7 +8,9 @@ import { transacaoRouter } from './transacoes.js';
 import { empresaRouter } from './empresa.js';
 import { documentoRouter } from './documentos.js';
 import { grupoRouter } from './grupos.js';
+import { deployRouter } from './deploy.js';
 export const appRouter = router({
+  deploy: deployRouter,
   clientes: clienteRouter,
   estoque: estoqueRouter,
   usuarios: usuarioRouter,

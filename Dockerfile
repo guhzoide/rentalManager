@@ -22,6 +22,11 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/src ./src
 COPY --from=build /app/dist ./dist
 
+# Prisma valida/prepara seus engines ao executar migrations. O runtime roda sem
+# privilégios, então os artefatos instalados durante o build precisam pertencer
+# ao usuário da aplicação.
+RUN chown -R bun:bun /app/node_modules /app/prisma
+
 USER bun
 EXPOSE 3001
 

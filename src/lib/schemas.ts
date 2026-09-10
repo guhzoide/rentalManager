@@ -136,3 +136,23 @@ export const empresaSchema = z.object({
 });
 
 export type EmpresaInput = z.infer<typeof empresaSchema>;
+
+// ─── Implantação ─────────────────────────────────────────────────────────────
+
+export const databaseConnectionSchema = z.object({
+    host: z.string().trim().min(1, 'Host é obrigatório')
+        .refine((value) => !/[\s/@?#]/.test(value), 'Informe somente o host ou endereço IP'),
+    port: z.number().int().min(1).max(65535),
+    database: z.string().trim().min(1, 'Banco de dados é obrigatório'),
+    username: z.string().trim().min(1, 'Usuário é obrigatório'),
+    password: z.string().min(1, 'Senha é obrigatória'),
+});
+
+export const deployMasterSchema = usuarioCreateSchema.pick({
+    nome: true,
+    email: true,
+    senha: true,
+});
+
+export type DatabaseConnectionInput = z.infer<typeof databaseConnectionSchema>;
+export type DeployMasterInput = z.infer<typeof deployMasterSchema>;

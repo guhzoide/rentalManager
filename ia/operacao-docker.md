@@ -4,8 +4,10 @@
 
 O `Dockerfile` gera uma imagem que entrega a SPA Vite e a API Hono no mesmo processo Bun, na porta `3001`. O servidor entrega os assets de `dist/` e usa `index.html` como fallback para as rotas da SPA.
 
-É necessário fornecer, no ambiente do container, `DATABASE_URL`, `BETTER_AUTH_SECRET` e `BETTER_AUTH_URL`.
+É necessário fornecer, no ambiente do container, `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` e `DEPLOYTOKEN`.
 Ao iniciar, a imagem aplica automaticamente as migrations pendentes antes de subir a API.
+
+O assistente de implantação fica disponível em `/deploy`. O valor de `DEPLOYTOKEN` protege o acesso à página: em desenvolvimento, defina-o no arquivo `.env`; no Portainer, cadastre-o nas variáveis de ambiente da stack. Após validar o token, o assistente testa uma conexão PostgreSQL, aplica as migrations e cria a empresa, os módulos básicos e o primeiro usuário master no banco informado.
 
 Exemplo local:
 
@@ -15,6 +17,7 @@ docker run --rm -p 3001:3001 \
   -e DATABASE_URL='…' \
   -e BETTER_AUTH_SECRET='…' \
   -e BETTER_AUTH_URL='http://localhost:3001' \
+  -e DEPLOYTOKEN='…' \
   rental-manager:local
 ```
 
@@ -67,6 +70,6 @@ O container escuta na porta `3001`; use `GET /health` para health checks. A conf
 
 ## Stack no Portainer
 
-O `docker-compose.yml` da raiz executa a imagem publicada no GHCR junto de um PostgreSQL 17 com volume persistente. Antes do deploy, configure `BETTER_AUTH_SECRET` e ajuste `BETTER_AUTH_URL` para a URL pública. Em hosts ARM64, defina `IMAGE_TAG=rentalManger-latest-arm64`; o padrão é `rentalManger-latest-amd64`. Para fixar uma versão, use por exemplo `IMAGE_TAG=rentalManger-v1.0.0-amd64`.
+O `docker-compose.yml` da raiz executa a imagem publicada no GHCR junto de um PostgreSQL 17 com volume persistente. Antes do deploy, configure `BETTER_AUTH_SECRET` e `DEPLOYTOKEN`, e ajuste `BETTER_AUTH_URL` para a URL pública. Em hosts ARM64, defina `IMAGE_TAG=rentalManger-latest-arm64`; o padrão é `rentalManger-latest-amd64`. Para fixar uma versão, use por exemplo `IMAGE_TAG=rentalManger-v1.0.0-amd64`.
 
 Se o pacote no GHCR for privado, cadastre `ghcr.io` em **Registries** no Portainer usando um token do GitHub com `read:packages` e selecione esse registry ao criar a stack.

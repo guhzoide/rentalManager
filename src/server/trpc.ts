@@ -23,12 +23,15 @@ export const createContext = async (opts?: any) => {
   const table = url?.searchParams.get('table') || undefined;
 
   let session = null;
-  try {
-    session = await auth.api.getSession({
-      headers: opts?.req?.headers || new Headers(),
-    });
-  } catch (err) {
-    console.error('Erro ao ler sessão no tRPC context:', err);
+  const isDeployRequest = url?.pathname.includes('/trpc/deploy.');
+  if (!isDeployRequest) {
+    try {
+      session = await auth.api.getSession({
+        headers: opts?.req?.headers || new Headers(),
+      });
+    } catch (err) {
+      console.error('Erro ao ler sessão no tRPC context:', err);
+    }
   }
 
   return {
