@@ -4,6 +4,7 @@ import { trpc, trpcClient } from '@/lib/trpc';
 
 import { MenuPage } from '@/pages/MenuPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { DeployPage } from '@/pages/DeployPage';
 
 const ClientesPage = lazy(() => import('@/pages/ClientesPage').then(m => ({ default: m.ClientesPage })));
 const EstoquePage = lazy(() => import('@/pages/EstoquePage').then(m => ({ default: m.EstoquePage })));
@@ -377,7 +378,9 @@ export default function App() {
         <ThemeProvider theme={theme}>
             <trpc.Provider client={trpcClient} queryClient={queryClient}>
                 <QueryClientProvider client={queryClient}>
-                    <AppInner isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+                    {window.location.pathname === '/deploy'
+                        ? <DeployPage isDarkMode={isDarkMode} />
+                        : <AppInner isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />}
                 </QueryClientProvider>
             </trpc.Provider>
         </ThemeProvider>

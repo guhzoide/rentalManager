@@ -6,6 +6,7 @@ services:
       DATABASE_URL: postgresql://admin:123@postgresql:5432/dbdev?schema=public
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      DEPLOYTOKEN: ${DEPLOYTOKEN}
     ports:
       - "${APP_PORT:-3001}:3001"
     networks:
