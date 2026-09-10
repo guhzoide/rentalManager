@@ -9,3 +9,4 @@ migrations
 tasks.md
 seed-admin.ts
 seed-empresas.ts
+.env-example
