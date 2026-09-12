@@ -2639,3 +2639,11 @@ select.form-control {
     transition-duration: 0.01ms !important;
   }
 }
+
+.image-upload { display: flex; flex-direction: column; gap: 10px; min-width: 0; width: 100%; padding: 16px; border: 1px dashed var(--border); border-radius: 12px; }
+.image-upload label { font-weight: 600; }
+.image-upload input { max-width: 100%; min-height: 44px; font-size: 16px; }
+.image-upload input::file-selector-button { min-height: 44px; margin-right: 10px; cursor: pointer; }
+.image-upload small { color: var(--text-secondary); overflow-wrap: anywhere; }
+.image-upload small[role=alert] { color: var(--danger); }
+.image-upload-preview { width: 100%; height: 150px; object-fit: contain; border-radius: 8px; background: var(--bg-secondary); }

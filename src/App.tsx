@@ -1,3 +1,5 @@
+import { resolveAppRoute, sessionScope, permittedTabs } from '@/lib/appNavigation';
+import { base64Image } from '@/lib/images';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { trpc, trpcClient } from '@/lib/trpc';
@@ -79,16 +81,15 @@ function renderPage(id: string) {
 }
 
 // ─── QueryClient ──────────────────────────────────────────────────────────────
-const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
-});
+
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDarkMode: (v: boolean) => void }) {
     const { data: session, isPending: sessionLoading } = useSession();
     const [openTabs, setOpenTabs] = useState<Tab[]>([]);
     const [activeTab, setActiveTab] = useState<string | null>(null); // null = menu
-    const [isCatalog, setIsCatalog] = useState(false);
+    const pathname = window.location.pathname;
+    const isCatalog = pathname === '/' || pathname === '/catalog' || pathname === '/catalogo';
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const allowedPages = useMemo(
         () => new Set((session?.user as { allowedPages?: string[] } | undefined)?.allowedPages
@@ -116,24 +117,23 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
         }
     }, [isDarkMode]);
 
-    // Simple routing for Catalog
     useEffect(() => {
-        const checkRoute = () => {
-            setIsCatalog(window.location.pathname === '/catalog');
-        };
-        checkRoute();
-        window.addEventListener('popstate', checkRoute);
-        return () => window.removeEventListener('popstate', checkRoute);
-    }, []);
+        if (isCatalog) {
+            if (pathname !== '/') window.history.replaceState({}, '', '/');
+            return;
+        }
+        if (sessionLoading) return;
+        const target = resolveAppRoute(pathname, Boolean(session));
+        if (target !== pathname) window.location.replace(target);
+    }, [pathname, isCatalog, sessionLoading, session]);
 
-    const { data: empresaData, isLoading: isLoadingList } = trpc.empresa.list.useQuery(
-        { id: "58f51956-983a-4046-b011-ca785ff41205" },
-        { enabled: !!session }
+    const visibleTabs = permittedTabs(openTabs, allowedPages, availableTabs);
+    const visibleActiveTab = visibleTabs.some((tab) => tab.id === activeTab) ? activeTab : null;
+
+    const { data: empresaData } = trpc.empresa.catalog.useQuery(
+        undefined,
+        { enabled: !isCatalog }
     );
-
-    if (isLoadingList) {
-        return <PageLoader />;
-    }
 
     if (isCatalog) {
         return (
@@ -174,9 +174,10 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
         );
     }
 
-    if (!session) {
-        return <LoginPage empresaData={empresaData} onLoginSuccess={() => {}} />;
+    if (pathname === '/login' && !session) {
+        return <LoginPage empresaData={empresaData} onLoginSuccess={() => window.location.replace('/menu')} />;
     }
+    if (!session || pathname !== '/menu') return <PageLoader />;
 
     const navigate = (id: string) => {
         setIsSidebarOpen(false);
@@ -196,15 +197,15 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
 
     const closeTab = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        const newTabs = openTabs.filter((t) => t.id !== id);
+        const newTabs = visibleTabs.filter((t) => t.id !== id);
         setOpenTabs(newTabs);
         if (activeTab === id) {
             setActiveTab(newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null);
         }
     };
 
-    const currentSidebarId = activeTab ?? 'menu';
-    const mobileTitle = activeTab ? availableTabs[activeTab]?.label ?? 'RentalManager' : 'Menu';
+    const currentSidebarId = visibleActiveTab ?? 'menu';
+    const mobileTitle = visibleActiveTab ? availableTabs[visibleActiveTab]?.label ?? 'RentalManager' : 'Menu';
 
     return (
         <div className="app-layout">
@@ -217,7 +218,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
             {/* Sidebar */}
             <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
                 <div className="sidebar-logo">
-                    <div className="sidebar-logo-icon"><img src={empresaData?.logoUrl ?? "/favicon.svg"} alt="" style={{ width: '100%', height: '100%', borderRadius: '20%' }} /></div>
+                    <div className="sidebar-logo-icon"><img src={base64Image(empresaData?.logoUrl) ?? "/favicon.svg"} alt="" style={{ width: '100%', height: '100%', borderRadius: '20%' }} /></div>
                     <span className="sidebar-logo-text">{empresaData?.nome}</span>
                     <button
                         className="btn btn-ghost btn-sm"
@@ -245,8 +246,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                             className="btn btn-ghost btn-sm"
                             style={{ width: '100%', justifyContent: 'center' }}
                             onClick={() => {
-                                window.history.pushState({}, '', '/catalog');
-                                setIsCatalog(true);
+                                window.location.assign('/');
                             }}
                         >
                             🌐 Ver catálogo
@@ -256,6 +256,9 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                             style={{ width: '100%', justifyContent: 'center' }}
                             onClick={async () => {
                                 await signOut();
+                                setOpenTabs([]);
+                                setActiveTab(null);
+                                window.location.replace('/login');
                             }}
                         >
                             🚪 Sair
@@ -275,12 +278,12 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                 </div>
 
                 {/* Tab bar */}
-                {openTabs.length > 0 && (
+                {visibleTabs.length > 0 && (
                     <div className="tab-bar">
-                        {openTabs.map((tab) => (
+                        {visibleTabs.map((tab) => (
                             <div
                                 key={tab.id}
-                                className={`tab-item${activeTab === tab.id ? ' active' : ''}`}
+                                className={`tab-item${visibleActiveTab === tab.id ? ' active' : ''}`}
                                 onClick={() => setActiveTab(tab.id)}
                             >
                                 <span>{tab.icon}</span>
@@ -300,13 +303,13 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
                 {/* Page content */}
                 <main className="page-content">
                     {/* Menu page */}
-                    <div className={`page-view${activeTab === null ? ' active' : ''}`}>
+                    <div className={`page-view${visibleActiveTab === null ? ' active' : ''}`}>
                         <MenuPage onNavigate={navigate} modules={allowedModules} />
                     </div>
 
                     {/* Tab pages */}
-                    {openTabs.map((tab) => (
-                        activeTab === tab.id && (
+                    {visibleTabs.map((tab) => (
+                        visibleActiveTab === tab.id && (
                             <div
                                 key={tab.id}
                                 className="page-view active"
@@ -336,9 +339,27 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     );
 }
 
+// Remount both the query cache and the tab state for every authenticated session.
+function SessionContent({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean; setIsDarkMode: (value: boolean) => void }) {
+    const [queryClient] = useState(() => new QueryClient({
+        defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+    }));
+    useEffect(() => () => queryClient.clear(), [queryClient]);
+    return (
+            <trpc.Provider client={trpcClient} queryClient={queryClient}>
+                <QueryClientProvider client={queryClient}>
+                    {window.location.pathname === '/deploy'
+                        ? <DeployPage isDarkMode={isDarkMode} />
+                        : <AppInner isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />}
+                </QueryClientProvider>
+            </trpc.Provider>
+    );
+}
+
 export default function App() {
     const [isDarkMode, setIsDarkMode] = useState(true);
-
+    const { data: session } = useSession();
+    const sessionKey = sessionScope(session);
     const theme = useMemo(() => createTheme({
         palette: {
             mode: isDarkMode ? 'dark' : 'light',
@@ -376,13 +397,7 @@ export default function App() {
 
     return (
         <ThemeProvider theme={theme}>
-            <trpc.Provider client={trpcClient} queryClient={queryClient}>
-                <QueryClientProvider client={queryClient}>
-                    {window.location.pathname === '/deploy'
-                        ? <DeployPage isDarkMode={isDarkMode} />
-                        : <AppInner isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />}
-                </QueryClientProvider>
-            </trpc.Provider>
+            <SessionContent key={sessionKey} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
         </ThemeProvider>
     );
 }

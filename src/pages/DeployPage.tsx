@@ -1,3 +1,4 @@
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useMemo, useState } from 'react';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -59,10 +60,15 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
     const [master, setMaster] = useState(initialMaster);
     const [errors, setErrors] = useState<FieldErrors>({});
     const [finished, setFinished] = useState(false);
+    const [installed, setInstalled] = useState(false);
+    const [pendingUpdates, setPendingUpdates] = useState<Array<{ id: string; title: string }>>([]);
+    const [resultMode, setResultMode] = useState<'created' | 'updated'>('created');
 
     const validateToken = trpc.deploy.validateToken.useMutation();
     const testConnection = trpc.deploy.testConnection.useMutation();
     const executeDeploy = trpc.deploy.execute.useMutation();
+    const updateDatabase = trpc.deploy.update.useMutation();
+    const busy = executeDeploy.isPending || updateDatabase.isPending || testConnection.isPending;
 
     const masterIsValid = useMemo(() => deployMasterSchema.safeParse(master).success, [master]);
 
@@ -83,7 +89,9 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
         const parsed = databaseConnectionSchema.safeParse(connection);
         if (!parsed.success) return setErrors(schemaErrors(parsed));
         try {
-            await testConnection.mutateAsync({ token, connection: parsed.data });
+            const status = await testConnection.mutateAsync({ token, connection: parsed.data });
+            setInstalled(status.installed);
+            setPendingUpdates(status.pendingUpdates);
             setErrors({});
             setConnectionTested(true);
             toast.success('Conexão realizada com sucesso.');
@@ -119,8 +127,23 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                 masterUser: masterResult.data,
             });
             setErrors({});
+            setResultMode('created');
             setFinished(true);
             toast.success('Implantação concluída com sucesso!', { autoClose: 5000 });
+        } catch (error) {
+            toast.error(getErrorMessage(error), { autoClose: 7000 });
+        }
+    };
+
+    const handleUpdate = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!connectionTested || !installed) return;
+        try {
+            await updateDatabase.mutateAsync({ token, connection });
+            setResultMode('updated');
+            setFinished(true);
+            setErrors({});
+            toast.success('Banco atualizado com sucesso!');
         } catch (error) {
             toast.error(getErrorMessage(error), { autoClose: 7000 });
         }
@@ -129,6 +152,8 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
     const updateConnection = <K extends keyof DatabaseConnectionInput>(key: K, value: DatabaseConnectionInput[K]) => {
         setConnection((current) => ({ ...current, [key]: value }));
         setConnectionTested(false);
+        setInstalled(false);
+        setPendingUpdates([]);
         setErrors((current) => ({ ...current, [key]: '' }));
     };
 
@@ -144,8 +169,8 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
 
     const steps = [
         { number: 1, label: 'Banco de dados', icon: <StorageOutlined fontSize="small" /> },
-        { number: 2, label: 'Empresa', icon: <BusinessOutlined fontSize="small" /> },
-        { number: 3, label: 'Usuário master', icon: <AdminPanelSettingsOutlined fontSize="small" /> },
+        { number: 2, label: installed ? 'Atualização' : 'Empresa', icon: <BusinessOutlined fontSize="small" /> },
+        ...(!installed ? [{ number: 3, label: 'Usuário master', icon: <AdminPanelSettingsOutlined fontSize="small" /> }] : []),
     ];
 
     return (
@@ -157,7 +182,7 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                     <div className="deploy-brand-icon"><StorageOutlined /></div>
                     <div>
                         <strong>RentalManager</strong>
-                        <span>Assistente de implantação</span>
+                        <span>Implantação e atualização</span>
                     </div>
                 </header>
 
@@ -165,8 +190,8 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                     <div className="deploy-token-card">
                         <div className="deploy-token-icon"><LockOutlined /></div>
                         <p className="deploy-eyebrow">ACESSO PROTEGIDO</p>
-                        <h1>Implante seu ambiente</h1>
-                        <p className="deploy-description">Informe o token definido para esta instalação para configurar o banco de dados e os primeiros acessos.</p>
+                        <h1>Prepare seu ambiente</h1>
+                        <p className="deploy-description">Informe o token definido para esta instalação para implantar ou atualizar o banco de dados.</p>
                         <form onSubmit={handleToken}>
                             <TextField
                                 value={token}
@@ -194,15 +219,15 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                 ) : finished ? (
                     <div className="deploy-token-card deploy-success-card">
                         <div className="deploy-success-icon"><CheckCircleOutline /></div>
-                        <p className="deploy-eyebrow">IMPLANTAÇÃO CONCLUÍDA</p>
+                        <p className="deploy-eyebrow">{resultMode === 'updated' ? 'ATUALIZAÇÃO CONCLUÍDA' : 'IMPLANTAÇÃO CONCLUÍDA'}</p>
                         <h1>Ambiente pronto para uso</h1>
-                        <p className="deploy-description">O schema, os dados da empresa e o usuário master foram criados com sucesso.</p>
-                        <a className="btn btn-primary deploy-main-button" href="/">Ir para o login</a>
+                        <p className="deploy-description">{resultMode === 'updated' ? 'As atualizações pendentes foram aplicadas. Os cadastros e acessos existentes foram mantidos.' : 'O banco, os dados da empresa e o usuário master foram criados com sucesso.'}</p>
+                        <a className="btn btn-primary deploy-main-button" href="/login">Ir para o login</a>
                     </div>
                 ) : (
                     <div className="deploy-wizard">
                         <div className="deploy-heading">
-                            <div><p className="deploy-eyebrow">CONFIGURAÇÃO INICIAL</p><h1>Implantação do banco de dados</h1><p>Complete as três etapas para preparar o RentalManager.</p></div>
+                            <div><p className="deploy-eyebrow">{installed ? 'BANCO EXISTENTE' : 'CONFIGURAÇÃO DO AMBIENTE'}</p><h1>{installed ? 'Atualização do banco de dados' : 'Implantação do banco de dados'}</h1><p>{installed ? 'Revise e aplique as atualizações disponíveis para esta instalação.' : 'Teste a conexão para identificar se o banco precisa de implantação ou atualização.'}</p></div>
                             <div className="deploy-secure-badge"><LockOutlined fontSize="small" /> Sessão protegida</div>
                         </div>
 
@@ -211,7 +236,7 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                                 const complete = activeStep > step.number;
                                 const available = step.number === 1 || (step.number === 2 && connectionTested) || step.number < activeStep;
                                 return <div key={step.number} className="deploy-step-wrap">
-                                    <button type="button" disabled={!available} onClick={() => available && setActiveStep(step.number)} className={`deploy-step ${activeStep === step.number ? 'active' : ''} ${complete ? 'complete' : ''}`}>
+                                    <button type="button" disabled={!available || busy} onClick={() => available && setActiveStep(step.number)} className={`deploy-step ${activeStep === step.number ? 'active' : ''} ${complete ? 'complete' : ''}`}>
                                         <span className="deploy-step-number">{complete ? <CheckCircleOutline fontSize="small" /> : step.icon}</span>
                                         <span><small>ETAPA {step.number}</small><strong>{step.label}</strong></span>
                                     </button>
@@ -220,7 +245,7 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                             })}
                         </nav>
 
-                        <div className="deploy-form-card">
+                        <fieldset className="deploy-form-card" disabled={busy} style={{ minWidth: 0, margin: 0 }}>
                             {activeStep === 1 && <form onSubmit={(event) => { event.preventDefault(); void handleTestConnection(); }}>
                                 <div className="deploy-form-title"><div className="deploy-form-icon"><StorageOutlined /></div><div><h2>Conexão com o banco</h2><p>Informe as credenciais do servidor PostgreSQL de destino.</p></div></div>
                                 <div className="form-grid deploy-fields">
@@ -237,13 +262,27 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                                 </div>
                             </form>}
 
-                            {activeStep === 2 && <form onSubmit={handleCompany}>
+                            {activeStep === 2 && installed && <form onSubmit={handleUpdate}>
+                                <div className="deploy-form-title"><div className="deploy-form-icon"><StorageOutlined /></div><div><h2>Atualizar banco existente</h2><p>Destino: {connection.database} em {connection.host}:{connection.port}</p></div></div>
+                                <p>A estrutura do banco será atualizada para esta versão do RentalManager. Empresa, usuários e permissões existentes serão preservados.</p>
+                                {pendingUpdates.length > 0 ? <>
+                                    <h3 style={{ marginTop: 20 }}>Atualizações pendentes</h3>
+                                    <ul>{pendingUpdates.map((update) => <li key={update.id}>{update.title}</li>)}</ul>
+                                    {pendingUpdates.some((update) => update.id === '20260912000100_images_base64') && <p>Referências antigas de imagens externas serão removidas. As imagens já salvas em base64 serão preservadas.</p>}
+                                </> : <p style={{ marginTop: 20 }}>Nenhuma atualização de dados pendente. Você pode verificar e atualizar a estrutura do banco.</p>}
+                                <div className="deploy-actions">
+                                    <button type="button" className="btn btn-ghost" onClick={() => setActiveStep(1)}>← Voltar</button>
+                                    <button type="submit" className="btn btn-primary" disabled={!connectionTested || updateDatabase.isPending}>{updateDatabase.isPending ? 'Atualizando banco...' : 'Atualizar banco'}</button>
+                                </div>
+                            </form>}
+
+                            {activeStep === 2 && !installed && <form onSubmit={handleCompany}>
                                 <div className="deploy-form-title"><div className="deploy-form-icon"><BusinessOutlined /></div><div><h2>Dados da empresa</h2><p>Cadastre as informações que identificarão o cliente no sistema.</p></div></div>
                                 <div className="form-grid deploy-fields">
                                     <TextField className="form-group full" label="Nome da empresa *" value={company.nome} onChange={(e) => updateCompany('nome', e.target.value)} error={!!errors.nome} helperText={errors.nome} />
                                     <TextField label="CNPJ" value={company.cnpj ?? ''} onChange={(e) => updateCompany('cnpj', e.target.value)} />
                                     <TextField label="Telefone" value={company.telefone ?? ''} onChange={(e) => updateCompany('telefone', e.target.value)} />
-                                    <TextField className="form-group full" label="URL do logo" value={company.logoUrl ?? ''} onChange={(e) => updateCompany('logoUrl', e.target.value)} />
+                                    <ImageUpload label="Logotipo" value={company.logoUrl} onChange={(value) => updateCompany('logoUrl', value)} error={errors.logoUrl} />
                                     <TextField label="CEP" value={company.cep ?? ''} onChange={(e) => updateCompany('cep', e.target.value)} />
                                     <TextField label="Bairro" value={company.bairro ?? ''} onChange={(e) => updateCompany('bairro', e.target.value)} />
                                     <TextField label="Logradouro" value={company.logradouro ?? ''} onChange={(e) => updateCompany('logradouro', e.target.value)} />
@@ -253,7 +292,7 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                                 <div className="deploy-actions"><button type="button" className="btn btn-ghost" onClick={() => setActiveStep(1)}>← Voltar</button><button type="submit" className="btn btn-primary">Continuar →</button></div>
                             </form>}
 
-                            {activeStep === 3 && <form onSubmit={handleDeploy}>
+                            {activeStep === 3 && !installed && <form onSubmit={handleDeploy}>
                                 <div className="deploy-form-title"><div className="deploy-form-icon"><AdminPanelSettingsOutlined /></div><div><h2>Usuário administrador</h2><p>Este será o primeiro acesso, criado automaticamente como master.</p></div><span className="deploy-master-badge">MASTER</span></div>
                                 <div className="form-grid deploy-fields">
                                     <TextField className="form-group full" label="Nome completo *" value={master.nome} onChange={(e) => updateMaster('nome', e.target.value)} error={!!errors.nome} helperText={errors.nome} />
@@ -263,7 +302,7 @@ export function DeployPage({ isDarkMode }: { isDarkMode: boolean }) {
                                 <div className="deploy-master-info"><AdminPanelSettingsOutlined /><span><strong>Acesso total habilitado</strong><small>O usuário terá permissão integral sobre todos os módulos.</small></span></div>
                                 <div className="deploy-actions"><button type="button" className="btn btn-ghost" onClick={() => setActiveStep(2)}>← Voltar</button><button type="submit" className="btn btn-primary deploy-button" disabled={!masterIsValid || executeDeploy.isPending}><RocketLaunchOutlined fontSize="small" />{executeDeploy.isPending ? 'Implantando...' : 'Fazer deploy'}</button></div>
                             </form>}
-                        </div>
+                        </fieldset>
                     </div>
                 )}
             </section>

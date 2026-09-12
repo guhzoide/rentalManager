@@ -2,7 +2,7 @@
 node_modules
 dist
 to-do
-migrations
+/migrations
 
 # Files
 .env

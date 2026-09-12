@@ -20,7 +20,10 @@ export async function getPaginatedResult<T>(
 
   const queryArgs: any = {
     where: input.filtros || {},
-    orderBy: input.orderBy || { id: 'desc' },
+    // Prisma requires one field per object when ordering by multiple fields.
+    orderBy: input.orderBy && Object.keys(input.orderBy).length > 0
+      ? Object.entries(input.orderBy).map(([field, direction]) => ({ [field]: direction }))
+      : { id: 'desc' },
     skip,
     take: limit,
   };

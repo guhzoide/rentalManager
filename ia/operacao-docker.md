@@ -5,7 +5,7 @@
 O `Dockerfile` gera uma imagem que entrega a SPA Vite e a API Hono no mesmo processo Bun, na porta `3001`. O servidor entrega os assets de `dist/` e usa `index.html` como fallback para as rotas da SPA.
 
 É necessário fornecer, no ambiente do container, `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` e `DEPLOYTOKEN`.
-Ao iniciar, a imagem aplica automaticamente as migrations pendentes antes de subir a API.
+O container inicia a API sem alterar o banco. Implantação e atualização são feitas pela página `/deploy`, protegida por `DEPLOYTOKEN`.
 
 O assistente de implantação fica disponível em `/deploy`. O valor de `DEPLOYTOKEN` protege o acesso à página: em desenvolvimento, defina-o no arquivo `.env`; no Portainer, cadastre-o nas variáveis de ambiente da stack. Após validar o token, o assistente testa uma conexão PostgreSQL, aplica as migrations e cria a empresa, os módulos básicos e o primeiro usuário master no banco informado.
 
@@ -73,3 +73,17 @@ O container escuta na porta `3001`; use `GET /health` para health checks. A conf
 O `docker-compose.yml` da raiz executa a imagem publicada no GHCR junto de um PostgreSQL 17 com volume persistente. Antes do deploy, configure `BETTER_AUTH_SECRET` e `DEPLOYTOKEN`, e ajuste `BETTER_AUTH_URL` para a URL pública. Em hosts ARM64, defina `IMAGE_TAG=rentalManger-latest-arm64`; o padrão é `rentalManger-latest-amd64`. Para fixar uma versão, use por exemplo `IMAGE_TAG=rentalManger-v1.0.0-amd64`.
 
 Se o pacote no GHCR for privado, cadastre `ghcr.io` em **Registries** no Portainer usando um token do GitHub com `read:packages` e selecione esse registry ao criar a stack.
+
+## Atualizações de bancos existentes
+
+Abra `/deploy`, valide o token e teste a conexão do banco de destino. Se já houver empresa ou usuário cadastrado, o assistente apresenta a etapa **Atualização**, sem solicitar novo cadastro de empresa ou master. Revise as pendências e selecione **Atualizar banco**.
+
+O servidor executa o Prisma 6 `migrate deploy` com as migrations versionadas em `prisma/migrations`. O histórico padrão `_prisma_migrations` impede reaplicações. Para instalações antigas feitas por `db push`, o servidor compara a estrutura com os snapshots conhecidos `prisma/baseline.prisma` e `prisma/baseline-base64.prisma` antes de registrar a baseline. Estruturas desconhecidas são recusadas sem alteração e precisam de uma migração de compatibilidade preparada no projeto.
+
+A migration de imagens converte as colunas existentes para `TEXT`/`TEXT[]` e remove referências externas, preservando imagens base64. A tela informa essa alteração antes da execução. Empresa, usuários e permissões existentes são mantidos. Módulos novos são adicionados sem reativar ou sobrescrever módulos existentes.
+
+As operações usam token, bloqueio no PostgreSQL contra execuções simultâneas e migrations transacionais. Credenciais não são persistidas pelo assistente. Atualizar outro banco não altera o `DATABASE_URL` do container.
+
+Para próximas versões, adicione e versione as migrations no projeto antes de distribuir a imagem; o cliente aplica as pendências pela mesma página, sem comandos manuais.
+
+Os snapshots de baseline são imutáveis: não os atualize junto com o schema de novas versões. Os títulos das migrations podem ser descritos em `src/server/deployment/updates.ts`; migrations novas são detectadas automaticamente mesmo sem título personalizado.

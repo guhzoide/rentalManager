@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { imageDataSchema, MAX_GALLERY_IMAGES } from './images.js';
 
 // ─── Usuário ──────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ export type GrupoInput = z.infer<typeof grupoSchema>;
 export const clienteSchema = z.object({
     nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
     cpf: z.string().optional().nullable(),
-    email: z.string().email('E-mail inválido'),
+    email: z.string().trim().email('E-mail inválido').or(z.literal('')).optional().nullable(),
     cep: z.string().optional().nullable(),
     bairro: z.string().optional().nullable(),
     rua: z.string().optional().nullable(),
@@ -68,8 +69,15 @@ export type EnderecoInput = z.infer<typeof enderecoSchema>;
 
 // ─── Estoque ──────────────────────────────────────────────────────────────────
 
+export const categoriaSchema = z.object({
+    nome: z.string().trim().min(2, 'Nome deve ter pelo menos 2 caracteres').max(80, 'Nome deve ter no máximo 80 caracteres'),
+});
+
+export type CategoriaInput = z.infer<typeof categoriaSchema>;
+
 export const estoqueSchema = z.object({
     nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+    categoriaId: z.string().min(1, 'Categoria é obrigatória'),
     peso: z.number({ error: 'Informe um número válido' }).min(0, 'Peso não pode ser negativo'),
     largura: z.number({ error: 'Informe um número válido' }).min(0, 'Largura não pode ser negativa'),
     altura: z.number({ error: 'Informe um número válido' }).min(0, 'Altura não pode ser negativa'),
@@ -77,8 +85,8 @@ export const estoqueSchema = z.object({
     quantidade: z.number({ error: 'Informe um número válido' }).int('Deve ser inteiro').min(0, 'Quantidade não pode ser negativa'),
     disponivel: z.number({ error: 'Informe um número válido' }).int('Deve ser inteiro').min(0, 'Quantidade não pode ser negativa'),
     ativo: z.boolean(),
-    imageUrl: z.string().url('Informe uma URL de imagem válida').optional().or(z.literal('')),
-    imageUrls: z.array(z.string().url('Informe uma URL de imagem válida').or(z.literal(''))).default([]),
+    imageUrl: imageDataSchema.optional(),
+    imageUrls: z.array(imageDataSchema).max(MAX_GALLERY_IMAGES, 'Adicione no máximo 8 imagens à galeria').default([]),
 });
 
 export type EstoqueInput = z.infer<typeof estoqueSchema>;
@@ -125,7 +133,9 @@ export type AgendaUpdateInput = z.infer<typeof agendaUpdateSchema>;
 
 export const empresaSchema = z.object({
     nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-    logoUrl: z.string().optional().nullable(),
+    logoUrl: imageDataSchema.optional().nullable(),
+    slogan: z.string().optional().nullable(),
+    sobreNos: z.string().max(10000, 'Use até 10.000 caracteres').optional().nullable(),
     cnpj: z.string().optional().nullable(),
     telefone: z.string().optional().nullable(),
     logradouro: z.string().optional().nullable(),

@@ -1,7 +1,9 @@
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -12,10 +14,12 @@ type EstoqueFormValues = z.input<typeof estoqueSchema>;
 
 interface EstoqueFormProps {
     defaultValues?: Partial<EstoqueInput>;
+    categorias: Array<{ id: string; nome: string }>;
+    categoriasLoading?: boolean;
     onSubmit: (data: EstoqueInput) => void;
 }
 
-export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
+export function EstoqueForm({ defaultValues, categorias, categoriasLoading = false, onSubmit }: EstoqueFormProps) {
     const {
         control,
         handleSubmit,
@@ -27,6 +31,7 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
         resolver: zodResolver(estoqueSchema),
         defaultValues: {
             nome: '',
+            categoriaId: '',
             peso: 0,
             largura: 0,
             altura: 0,
@@ -45,6 +50,7 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
     useEffect(() => {
         reset({
             nome: '',
+            categoriaId: '',
             peso: 0,
             largura: 0,
             altura: 0,
@@ -122,19 +128,39 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
 
                 <div className="form-group full">
                     <Controller
+                        name="categoriaId"
+                        control={control}
+                        render={({ field }) => (
+                            <Autocomplete
+                                options={categorias}
+                                getOptionLabel={(option) => option.nome}
+                                value={categorias.find((categoria) => categoria.id === field.value) ?? null}
+                                onChange={(_, categoria) => field.onChange(categoria?.id ?? '')}
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                                loading={categoriasLoading}
+                                disabled={categoriasLoading || categorias.length === 0}
+                                noOptionsText="Nenhuma categoria cadastrada"
+                                fullWidth
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Categoria *"
+                                        variant="outlined"
+                                        error={!!errors.categoriaId}
+                                        helperText={errors.categoriaId?.message || (categorias.length === 0 && !categoriasLoading ? 'Cadastre uma categoria antes de salvar o produto.' : undefined)}
+                                    />
+                                )}
+                            />
+                        )}
+                    />
+                </div>
+
+                <div className="form-group full">
+                    <Controller
                         name="imageUrl"
                         control={control}
                         render={({ field }) => (
-                            <TextField
-                                {...field}
-                                value={field.value || ''}
-                                label="URL da imagem de capa"
-                                variant="outlined"
-                                fullWidth
-                                placeholder="https://exemplo.com/capa.jpg"
-                                error={!!errors.imageUrl}
-                                helperText={errors.imageUrl?.message || 'A imagem de capa será exibida no catálogo.'}
-                            />
+                            <ImageUpload label="Imagem de capa" value={field.value} onChange={field.onChange} error={errors.imageUrl?.message} />
                         )}
                     />
                 </div>
@@ -142,7 +168,7 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
                 <div className="form-group full">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
                         <span style={{ fontSize: 14, fontWeight: 600 }}>Galeria de imagens</span>
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setValue('imageUrls', [...imageUrls, ''])}>
+                        <button type="button" className="btn btn-ghost btn-sm" disabled={imageUrls.length >= 8} onClick={() => setValue('imageUrls', [...imageUrls, ''], { shouldDirty: true })}>
                             + Adicionar imagem
                         </button>
                     </div>
@@ -154,19 +180,10 @@ export function EstoqueForm({ defaultValues, onSubmit }: EstoqueFormProps) {
                                 name={`imageUrls.${index}`}
                                 control={control}
                                 render={({ field: imageField }) => (
-                                    <TextField
-                                        {...imageField}
-                                        label={`Imagem ${index + 1}`}
-                                        variant="outlined"
-                                        size="small"
-                                        fullWidth
-                                        placeholder="https://exemplo.com/imagem.jpg"
-                                        error={!!errors.imageUrls?.[index]}
-                                        helperText={errors.imageUrls?.[index]?.message}
-                                    />
+                                    <ImageUpload label={`Imagem ${index + 1}`} value={imageField.value} onChange={imageField.onChange} error={errors.imageUrls?.[index]?.message} />
                                 )}
                             />
-                            <button type="button" className="btn btn-danger btn-sm" onClick={() => setValue('imageUrls', imageUrls.filter((_, imageIndex) => imageIndex !== index))} title="Remover imagem">
+                            <button type="button" className="btn btn-danger btn-sm" onClick={() => setValue('imageUrls', imageUrls.filter((_, imageIndex) => imageIndex !== index), { shouldDirty: true, shouldValidate: true })} title="Remover imagem">
                                 ×
                             </button>
                         </div>

@@ -40,7 +40,7 @@ Estes itens descrevem o estado atual, não mudanças já realizadas:
 - O cliente mistura `principal` e `complemento === 'Principal'` na sincronização de endereço; padronize antes de depender desse marcador em novos fluxos.
 - `transacoes` é independente de `agendas`; o financeiro apenas consolida os dois no front-end.
 - Documentos legados do Kanvas sem `usuarioId` ficam acessíveis apenas a usuários `master`; atribua um proprietário por migração caso devam voltar a usuários comuns.
-- Imagens de estoque são URLs externas (`imageUrl` como capa e `imageUrls` como galeria); não há upload ou armazenamento de arquivos configurado.
+- Logos e imagens de estoque são selecionados por arquivo e persistidos como data URLs base64 nos campos existentes (`logoUrl`, `imageUrl`, `imageUrls`). São aceitos JPEG, PNG e WebP até 2 MB por imagem e até 8 imagens de galeria. URLs externas não são aceitas nem retornadas pela API. A página `/deploy` aplica as migrations versionadas para converter as colunas existentes de CITEXT para TEXT e excluir referências antigas que não sejam base64 (sem baixar arquivos). O histórico do Prisma impede reaplicações. Não há serviço externo de armazenamento.
 - A documentação padrão do `README.md` ainda é a do template Vite. Esta pasta é a referência de contexto do produto até que o README raiz seja atualizado.
 
 ## Decisões que exigem confirmação antes de implementar

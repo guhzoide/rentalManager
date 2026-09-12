@@ -1,3 +1,4 @@
+import { base64Image, base64Gallery } from '../../lib/images.js';
 import { z } from 'zod';
 import { moduleProcedure, publicProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
@@ -5,7 +6,9 @@ import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
 import { estoqueSchema } from '../../lib/schemas.js';
 
 
-import { type estoques } from '@prisma/client';
+import { type categorias, type estoques } from '@prisma/client';
+
+type EstoqueComCategoria = estoques & { categoria: categorias };
 
 export const estoqueRouter = router({
   list: publicProcedure
@@ -17,7 +20,17 @@ export const estoqueRouter = router({
           ativo: true,
         };
       }
-      return getPaginatedResult<estoques>(prisma.estoques, input);
+      const result = await getPaginatedResult<EstoqueComCategoria>(prisma.estoques, input, {
+        include: { categoria: true },
+      });
+      return {
+        ...result,
+        data: result.data.map((item) => ({
+          ...item,
+          imageUrl: base64Image(item.imageUrl),
+          imageUrls: base64Gallery(item.imageUrls),
+        })),
+      };
     }),
 
   create: moduleProcedure('estoque')

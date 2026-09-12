@@ -30,4 +30,4 @@ RUN chown -R bun:bun /app/node_modules /app/prisma
 USER bun
 EXPOSE 3001
 
-CMD ["sh", "-c", "bunx prisma migrate deploy && exec bun src/server/index.ts"]
+CMD ["bun", "src/server/index.ts"]
