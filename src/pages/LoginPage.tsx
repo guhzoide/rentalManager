@@ -1,3 +1,4 @@
+import { base64Image } from '@/lib/images';
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -92,7 +93,7 @@ export function LoginPage({ onLoginSuccess, empresaData }: LoginPageProps) {
 
                 {/* Logo */}
                 <div className="login-logo">
-                    <div className="login-logo-icon"><img src={empresaData?.logoUrl ?? "/favicon.svg"} alt="" style={{ width: '100%', height: '100%', borderRadius: '20%' }} /></div>
+                    <div className="login-logo-icon"><img src={base64Image(empresaData?.logoUrl) ?? "/favicon.svg"} alt="" style={{ width: '100%', height: '100%', borderRadius: '20%' }} /></div>
 
                     <div>
                         <h2 className="login-logo-title">{empresaData?.nome ?? 'Bem-vindo (a)'}</h2>

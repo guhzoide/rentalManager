@@ -13,8 +13,6 @@ model empresas {
   id          String   @id @default(uuid()) @db.Citext
   nome        String   @db.Citext
   logoUrl     String?  @db.Text
-  slogan      String?  @db.Citext
-  sobreNos    String?  @db.Text
   cnpj        String?  @db.Citext
   telefone    String?  @db.Citext
   logradouro  String?  @db.Citext
@@ -83,12 +81,10 @@ model enderecos {
 model estoques {
   id          String         @id @default(uuid()) @db.Citext
   nome        String         @db.Citext
-  categoriaId String         @db.Citext
   peso        Float
   largura     Float
   altura      Float
   valorDiaria Float
-  /// Capa e galeria em base64 com prefixo data:image, nunca URLs externas.
   imageUrl    String?        @db.Text
   imageUrls   String[]       @default([]) @db.Text
   ativo       Boolean        @default(true)
@@ -96,18 +92,7 @@ model estoques {
   updatedAt   DateTime       @updatedAt
   quantidade  Int            @default(0)
   disponivel  Int            @default(0)
-  categoria   categorias     @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
   itens       agenda_itens[]
-
-  @@index([categoriaId])
-}
-
-model categorias {
-  id        String     @id @default(uuid()) @db.Citext
-  nome      String     @unique @db.Citext
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  estoques  estoques[]
 }
 
 model User {

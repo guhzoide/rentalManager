@@ -1,3 +1,4 @@
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'react-toastify';
@@ -16,6 +17,7 @@ export function EmpresaPage() {
         onSuccess: () => {
             toast.success('Configurações da empresa salvas com sucesso!');
             utils.empresa.list.invalidate();
+            utils.empresa.catalog.invalidate();
             utils.empresa.listAll.invalidate();
         },
         onError: (err) => toast.error(err.message),
@@ -31,6 +33,8 @@ export function EmpresaPage() {
         resolver: zodResolver(empresaSchema),
         defaultValues: {
             nome: '',
+            slogan: '',
+            sobreNos: '',
             logoUrl: '',
             cnpj: '',
             telefone: '',
@@ -46,6 +50,8 @@ export function EmpresaPage() {
         if (empresa) {
             reset({
                 nome: empresa.nome || '',
+                slogan: empresa.slogan || '',
+                sobreNos: empresa.sobreNos || '',
                 logoUrl: empresa.logoUrl || '',
                 cnpj: empresa.cnpj || '',
                 telefone: empresa.telefone || '',
@@ -163,6 +169,20 @@ export function EmpresaPage() {
                                 />
                             )}
                         />
+                        <Controller
+                            name="slogan"
+                            control={control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    label="Slogan"
+                                    variant="outlined"
+                                    fullWidth
+                                    error={!!errors.slogan}
+                                    helperText={errors.slogan?.message}
+                                />
+                            )}
+                        />
 
                         <Controller
                             name="cnpj"
@@ -200,18 +220,15 @@ export function EmpresaPage() {
                             name="logoUrl"
                             control={control}
                             render={({ field }) => (
-                                <TextField
-                                    {...field}
-                                    value={field.value || ''}
-                                    label="URL do Logotipo"
-                                    variant="outlined"
-                                    fullWidth
-                                    error={!!errors.logoUrl}
-                                    helperText={errors.logoUrl?.message}
-                                />
+                                <ImageUpload label="Logotipo" value={field.value} onChange={field.onChange} error={errors.logoUrl?.message} />
                             )}
                         />
                     </div>
+
+                    <Controller name="sobreNos" control={control} render={({ field }) => (
+                        <TextField {...field} value={field.value ?? ''} label="Sobre nós" multiline minRows={5} fullWidth
+                            error={!!errors.sobreNos} helperText={errors.sobreNos?.message || 'Este texto será exibido na seção Sobre nós do catálogo.'} />
+                    )} />
 
                     <h3 style={{ margin: '12px 0 0 0', fontSize: '16px', fontWeight: '700', borderBottom: '1px solid var(--border)', paddingBottom: '12px', color: 'var(--text-primary)' }}>
                         Endereço Comercial (Emitente)
@@ -327,7 +344,7 @@ export function EmpresaPage() {
                                 cursor: 'pointer',
                             }}
                         >
-                            {isPending ? 'Salvando...' : '💾 Salvar Configurações'}
+                            {isPending ? 'Salvando...' : 'Salvar'}
                         </button>
                     </div>
                 </form>

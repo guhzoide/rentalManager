@@ -22,6 +22,7 @@ interface DataGridProps<T = any> {
     onPageChange?: (page: number) => void;
     pageSize?: number;
     onRefresh?: () => void;
+    toolbarActions?: React.ReactNode;
 }
 
 export function DataGrid<T extends Record<string, any>>({
@@ -37,6 +38,7 @@ export function DataGrid<T extends Record<string, any>>({
     onPageChange,
     pageSize = 20,
     onRefresh,
+    toolbarActions,
 }: DataGridProps<T>) {
     const [search, setSearch] = useState('');
 
@@ -82,6 +84,7 @@ export function DataGrid<T extends Record<string, any>>({
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'left' }}>
+                    {toolbarActions}
                     {onRefresh && (
                         <button className="btn btn-primary" onClick={onRefresh} aria-label="Atualizar listagem" title="Atualizar listagem">
                             <RefreshIcon />

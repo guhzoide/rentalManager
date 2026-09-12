@@ -108,7 +108,7 @@ export function ClientForm({
                                 render={({ field }) => (
                                     <TextField
                                         {...field}
-                                        label="E-mail *"
+                                        label="E-mail"
                                         variant="outlined"
                                         fullWidth
                                         placeholder="email@exemplo.com"

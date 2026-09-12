@@ -51,7 +51,7 @@ Prisma Client
 PostgreSQL
 ```
 
-`App.tsx` não usa um roteador dedicado: as telas internas são abertas como abas em estado local. A exceção é `/catalog`, identificada manualmente por `window.location.pathname`; essa página é pública. As páginas pesadas são carregadas com `lazy`/`Suspense`.
+`App.tsx` não usa um roteador dedicado: as telas internas são abertas como abas em estado local. O catálogo público abre em `/`; `/catalog` e `/catalogo` continuam como aliases. O login fica em `/login` e o sistema em `/menu`, que exige sessão. As rotas são identificadas por `window.location.pathname`. O estado das abas e o cache de consultas são isolados por usuário e sessão; abas sem permissão não são renderizadas. As páginas pesadas são carregadas com `lazy`/`Suspense`.
 
 ## Execução local
 

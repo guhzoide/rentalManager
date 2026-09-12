@@ -1,10 +1,13 @@
 import crypto from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { Client } from 'pg';
+import { inspectDatabase, migrateDatabase } from '../deployment/updates.js';
+import { runPrisma } from '../deployment/prisma.js';
 import { PrismaClient } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { hashPassword } from 'better-auth/crypto';
 import { z } from 'zod';
 import { EMPRESA_ID } from '../../lib/empresa.js';
+import { DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_NAME } from '../../lib/categories.js';
 import {
     databaseConnectionSchema,
     deployMasterSchema,
@@ -52,13 +55,20 @@ function createDatabaseUrl(connection: DatabaseConnectionInput) {
         + `@${host}:${connection.port}/${encodeURIComponent(connection.database)}?schema=public&connect_timeout=10`;
 }
 
+function connectionClient(connection: DatabaseConnectionInput) {
+    return new Client({
+        host: connection.host, port: connection.port, database: connection.database,
+        user: connection.username, password: connection.password, connectionTimeoutMillis: 10_000,
+    });
+}
+
 async function checkConnection(connection: DatabaseConnectionInput) {
-    const client = new PrismaClient({ datasourceUrl: createDatabaseUrl(connection) });
+    const client = connectionClient(connection);
     try {
-        await client.$connect();
-        await client.$queryRaw`SELECT 1`;
+        await client.connect();
+        return await inspectDatabase(client);
     } finally {
-        await client.$disconnect();
+        await client.end();
     }
 }
 
@@ -67,30 +77,6 @@ function safeDeploymentError(error: unknown, connection: DatabaseConnectionInput
     return rawMessage
         .split(connection.password).join('********')
         .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, 'endereço do banco');
-}
-
-async function applyMigrations(databaseUrl: string) {
-    const processResult = spawn(
-        process.execPath,
-        ['x', 'prisma', 'migrate', 'deploy', '--schema', 'prisma/schema.prisma'],
-        {
-            cwd: process.cwd(),
-            env: { ...process.env, DATABASE_URL: databaseUrl },
-        },
-    );
-
-    let standardOutput = '';
-    let errorOutput = '';
-    processResult.stdout.on('data', (chunk) => { standardOutput += String(chunk); });
-    processResult.stderr.on('data', (chunk) => { errorOutput += String(chunk); });
-    const exitCode = await new Promise<number>((resolve, reject) => {
-        processResult.once('error', reject);
-        processResult.once('close', (code) => resolve(code ?? 1));
-    });
-
-    if (exitCode !== 0) {
-        throw new Error(errorOutput.trim() || standardOutput.trim() || 'Falha ao aplicar o schema do banco.');
-    }
 }
 
 export const deployRouter = router({
@@ -106,13 +92,54 @@ export const deployRouter = router({
         .mutation(async ({ input }) => {
             assertDeployToken(input.token);
             try {
-                await checkConnection(input.connection);
-                return { connected: true };
+                const status = await checkConnection(input.connection);
+                return { connected: true, ...status };
             } catch (error) {
                 throw new TRPCError({
                     code: 'BAD_REQUEST',
                     message: `Não foi possível conectar ao banco: ${safeDeploymentError(error, input.connection)}`,
                 });
+            }
+        }),
+
+    update: publicProcedure
+        .input(z.object({ token: deployTokenSchema, connection: databaseConnectionSchema }))
+        .mutation(async ({ input }) => {
+            assertDeployToken(input.token);
+            if (deploymentInProgress) throw new TRPCError({ code: 'CONFLICT', message: 'Já existe uma operação de banco em andamento.' });
+            deploymentInProgress = true;
+            const lockClient = connectionClient(input.connection);
+            let targetDatabase: PrismaClient | null = null;
+            try {
+                await lockClient.connect();
+                const { rows: [lock] } = await lockClient.query('SELECT pg_try_advisory_lock(724631902) AS acquired');
+                if (!lock.acquired) throw new TRPCError({ code: 'CONFLICT', message: 'Este banco já está sendo atualizado. Aguarde e tente novamente.' });
+                const status = await inspectDatabase(lockClient);
+                if (!status.installed) throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Banco ainda não implantado. Teste a conexão novamente para iniciar a implantação.' });
+                const databaseUrl = createDatabaseUrl(input.connection);
+                await migrateDatabase(status, (args, allowed) => runPrisma(databaseUrl, args, allowed));
+                const migrated = await inspectDatabase(lockClient);
+                if (!migrated.hasMigrationHistory || migrated.pendingUpdates.length > 0) {
+                    throw new Error('O Prisma não confirmou a aplicação das migrations. A operação não foi concluída.');
+                }
+                targetDatabase = new PrismaClient({ datasourceUrl: databaseUrl });
+                await targetDatabase.$transaction(async (transaction) => {
+                    await transaction.categorias.upsert({
+                        where: { id: DEFAULT_CATEGORY_ID },
+                        create: { id: DEFAULT_CATEGORY_ID, nome: DEFAULT_CATEGORY_NAME },
+                        update: { nome: DEFAULT_CATEGORY_NAME },
+                    });
+                    for (const module of systemModules) {
+                        await transaction.modulos.upsert({ where: { id: module.id }, create: { ...module }, update: {} });
+                    }
+                });
+                return { success: true, mode: 'updated' as const };
+            } catch (error) {
+                if (error instanceof TRPCError) throw error;
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Falha na atualização: ${safeDeploymentError(error, input.connection)}` });
+            } finally {
+                try { await targetDatabase?.$disconnect(); }
+                finally { try { await lockClient.end(); } finally { deploymentInProgress = false; } }
             }
         }),
 
@@ -132,21 +159,22 @@ export const deployRouter = router({
             deploymentInProgress = true;
             const databaseUrl = createDatabaseUrl(input.connection);
             let targetDatabase: PrismaClient | null = null;
+            const lockClient = connectionClient(input.connection);
 
             try {
-                await checkConnection(input.connection);
-                await applyMigrations(databaseUrl);
+                await lockClient.connect();
+                const { rows: [lock] } = await lockClient.query('SELECT pg_try_advisory_lock(724631902) AS acquired');
+                if (!lock.acquired) throw new TRPCError({ code: 'CONFLICT', message: 'Este banco já está sendo atualizado. Aguarde e tente novamente.' });
+                const status = await inspectDatabase(lockClient);
+                if (status.installed) throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Banco já implantado. Teste a conexão novamente para atualizar.' });
+                await migrateDatabase(status, (args, allowed) => runPrisma(databaseUrl, args, allowed));
+                const migrated = await inspectDatabase(lockClient);
+                if (!migrated.hasMigrationHistory || migrated.pendingUpdates.length > 0) {
+                    throw new Error('O Prisma não confirmou a aplicação das migrations. A operação não foi concluída.');
+                }
 
                 targetDatabase = new PrismaClient({ datasourceUrl: databaseUrl });
                 await targetDatabase.$connect();
-
-                const existingUser = await targetDatabase.user.findUnique({
-                    where: { email: input.masterUser.email },
-                    select: { id: true },
-                });
-                if (existingUser) {
-                    throw new TRPCError({ code: 'CONFLICT', message: 'Já existe um usuário com esse e-mail no banco informado.' });
-                }
 
                 const hashedPassword = await hashPassword(input.masterUser.senha);
                 const userId = crypto.randomUUID();
@@ -156,6 +184,12 @@ export const deployRouter = router({
                         where: { id: EMPRESA_ID },
                         create: { id: EMPRESA_ID, ...input.company },
                         update: input.company,
+                    });
+
+                    await transaction.categorias.upsert({
+                        where: { id: DEFAULT_CATEGORY_ID },
+                        create: { id: DEFAULT_CATEGORY_ID, nome: DEFAULT_CATEGORY_NAME },
+                        update: { nome: DEFAULT_CATEGORY_NAME },
                     });
 
                     for (const module of systemModules) {
@@ -187,7 +221,7 @@ export const deployRouter = router({
                     });
                 });
 
-                return { success: true };
+                return { success: true, mode: "created" as const };
             } catch (error) {
                 if (error instanceof TRPCError) throw error;
                 throw new TRPCError({
@@ -195,8 +229,8 @@ export const deployRouter = router({
                     message: `Falha na implantação: ${safeDeploymentError(error, input.connection)}`,
                 });
             } finally {
-                await targetDatabase?.$disconnect();
-                deploymentInProgress = false;
+                try { await targetDatabase?.$disconnect(); }
+                finally { try { await lockClient.end(); } finally { deploymentInProgress = false; } }
             }
         }),
 });

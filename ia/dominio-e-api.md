@@ -48,7 +48,7 @@ A coleção `modulos` é a única fonte de dados para o catálogo de páginas. I
 
 ### Catálogo público
 
-`/catalog` consulta `estoque.list` e `usuarios.listAtendentes` sem autenticação. Para usuário não autenticado, `estoque.list` força o filtro `ativo: true`. O catálogo apresenta disponibilidade e cria links para WhatsApp de usuários marcados como atendentes com telefone preenchido.
+O catálogo em `/` consulta `estoque.list` e `usuarios.listAtendentes` sem autenticação. Para usuário não autenticado, `estoque.list` força o filtro `ativo: true`. O catálogo usa tema claro, busca e ordenação no servidor, com páginas de 12 itens. Apresenta disponibilidade e cria links para WhatsApp de usuários marcados como atendentes com telefone preenchido.
 
 ### Kanvas e propriedade de documentos
 
@@ -101,3 +101,5 @@ O resultado é `{ data, total, pagina, limit, totalPaginas }`. Filtros e ordena�
 4. Registre-o em `src/server/routers/_app.ts`; o tipo do cliente será inferido automaticamente.
 5. Implemente página e formulário, usando `trpc.<router>` e invalidando queries afetadas em `onSuccess`.
 6. Acrescente navegação em `App.tsx`/`MenuPage.tsx` se a funcionalidade for uma tela principal.
+
+A identidade pública do catálogo usa `empresa.catalog`, que retorna somente nome, logo base64, slogan e `sobreNos`. O texto Sobre nós é editável em Empresa e armazenado como texto simples. A migration `20260912000200_company_catalog` adiciona os campos necessários pela página de deploy.
