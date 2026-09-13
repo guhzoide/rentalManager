@@ -7,6 +7,7 @@ import { trpc, trpcClient } from '@/lib/trpc';
 import { MenuPage } from '@/pages/MenuPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { DeployPage } from '@/pages/DeployPage';
+import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 
 const ClientesPage = lazy(() => import('@/pages/ClientesPage').then(m => ({ default: m.ClientesPage })));
 const EstoquePage = lazy(() => import('@/pages/EstoquePage').then(m => ({ default: m.EstoquePage })));
@@ -130,7 +131,7 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     const visibleTabs = permittedTabs(openTabs, allowedPages, availableTabs);
     const visibleActiveTab = visibleTabs.some((tab) => tab.id === activeTab) ? activeTab : null;
 
-    const { data: empresaData } = trpc.empresa.catalog.useQuery(
+    const { data: empresaData, isLoading: isLoadingEmpresa } = trpc.empresa.catalog.useQuery(
         undefined,
         { enabled: !isCatalog }
     );
@@ -144,38 +145,11 @@ function AppInner({ isDarkMode, setIsDarkMode }: { isDarkMode: boolean, setIsDar
     }
 
     if (sessionLoading) {
-        return (
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '100vh',
-                background: 'var(--bg-primary)',
-                color: 'var(--text-secondary)'
-            }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                        width: '32px',
-                        height: '32px',
-                        border: '3px solid var(--border)',
-                        borderTopColor: 'var(--accent)',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite',
-                        margin: '0 auto 12px auto'
-                    }} />
-                    <style>{`
-                        @keyframes spin {
-                            to { transform: rotate(360deg); }
-                        }
-                    `}</style>
-                    <p style={{ fontSize: '13px' }}>Carregando sessão...</p>
-                </div>
-            </div>
-        );
+        return <LoadingOverlay title="Preparando seu acesso" description="Carregando sua sessão..." />;
     }
 
     if (pathname === '/login' && !session) {
-        return <LoginPage empresaData={empresaData} onLoginSuccess={() => window.location.replace('/menu')} />;
+        return <LoginPage empresaData={empresaData} empresaLoading={isLoadingEmpresa} onLoginSuccess={() => window.location.replace('/menu')} />;
     }
     if (!session || pathname !== '/menu') return <PageLoader />;
 
