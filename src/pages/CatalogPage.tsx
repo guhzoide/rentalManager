@@ -1,9 +1,10 @@
 import { base64Image, base64Gallery } from '@/lib/images';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import './CatalogPage.css';
+import '@/styles/CatalogPage.css';
 import { trpc } from '@/lib/trpc';
 import { Modal } from '@/components/ui/Modal';
+import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { isDefaultCategory } from '@/lib/categories';
 
 interface EstoqueItem {
@@ -312,22 +313,11 @@ export function CatalogPage() {
     return (
         <div className="catalog-page" ref={pageRef}>
             {isInitialLoading && (
-                <div className="catalog-loading-overlay" role="status" aria-live="polite" aria-label="Preparando o catálogo">
-                    <div className="catalog-loading-charm">
-                        <div className="catalog-loading-orbit" aria-hidden="true">
-                            <span className="catalog-loading-spark catalog-loading-spark--one">✦</span>
-                            <span className="catalog-loading-spark catalog-loading-spark--two">✦</span>
-                            <span className="catalog-loading-package">
-                                <i className="catalog-loading-package-bow" />
-                                <i className="catalog-loading-package-lid" />
-                                <i className="catalog-loading-package-body" />
-                            </span>
-                        </div>
-                        <strong>Preparando o catálogo</strong>
-                        <span>Organizando tudo com carinho para você...</span>
-                        <div className="catalog-loading-dots" aria-hidden="true"><i /><i /><i /></div>
-                    </div>
-                </div>
+                <LoadingOverlay
+                    tone="catalog"
+                    title="Preparando o catálogo"
+                    description="Organizando tudo com carinho para você..."
+                />
             )}
             {isSearchFloating && createPortal(
                 <div className="catalog-page catalog-floating-portal">

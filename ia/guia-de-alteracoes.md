@@ -8,7 +8,7 @@
 - Páginas usam `trpc.useUtils()` e invalidam as queries afetadas após mutations bem-sucedidas.
 - Feedback ao usuário é feito com `react-toastify`; exclusões passam normalmente por `ConfirmationModal`.
 - Datas são exibidas/manipuladas com `dayjs`; moeda usa `Intl.NumberFormat` com `pt-BR`/BRL.
-- CSS global está em `src/App.css` e `src/index.css`; componentes do Kanvas usam muitos estilos inline.
+- Os arquivos CSS estão centralizados em `src/styles/`; componentes do Kanvas usam muitos estilos inline.
 - O catálogo de módulos é persistido em `modulos`; não recrie listas hardcoded de páginas, nomes, ícones ou ordem na aplicação.
 - Autorização de documentos do Kanvas deve ser aplicada no servidor por `usuarioId`; esconder registros apenas no frontend não é controle de acesso.
 - `master` é o único bypass das permissões de grupo e da propriedade dos documentos.

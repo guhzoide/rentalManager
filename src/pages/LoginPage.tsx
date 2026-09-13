@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { signIn } from '@/lib/auth-client';
 import { toast } from 'react-toastify';
 import { LOGIN_STYLES } from '@/utils/loginUtils';
+import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 
 const loginSchema = z.object({
     email: z.string().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
@@ -21,10 +22,11 @@ type LoginInput = z.infer<typeof loginSchema>;
 
 interface LoginPageProps {
     onLoginSuccess: () => void;
-    empresaData: any;
+    empresaData?: { nome?: string | null; logoUrl?: string | null } | null;
+    empresaLoading?: boolean;
 }
 
-export function LoginPage({ onLoginSuccess, empresaData }: LoginPageProps) {
+export function LoginPage({ onLoginSuccess, empresaData, empresaLoading = false }: LoginPageProps) {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -64,7 +66,7 @@ export function LoginPage({ onLoginSuccess, empresaData }: LoginPageProps) {
                 onRequest: () => setLoading(true),
                 onSuccess: () => {
                     setLoading(false);
-                    toast.success('Login efetuado com success!');
+                    toast.success('Login efetuado com sucesso!');
                     onLoginSuccess();
                 },
                 onError: (ctx) => {
@@ -79,7 +81,13 @@ export function LoginPage({ onLoginSuccess, empresaData }: LoginPageProps) {
     };
 
     return (
-        <div className="login-root">
+        <div className="login-root" aria-busy={empresaLoading || loading}>
+            {(empresaLoading || loading) && (
+                <LoadingOverlay
+                    title={loading ? 'Validando seu acesso' : 'Preparando o login'}
+                    description={loading ? 'Só mais um instante...' : 'Carregando as informações da empresa...'}
+                />
+            )}
             {/* Animated background layers */}
             <div className="login-bg-gradient" />
             <div className="login-bg-grid" />
@@ -89,15 +97,13 @@ export function LoginPage({ onLoginSuccess, empresaData }: LoginPageProps) {
 
             {/* Card */}
             <div className="login-card">
-                <div className="login-card-bar" />
 
                 {/* Logo */}
                 <div className="login-logo">
                     <div className="login-logo-icon"><img src={base64Image(empresaData?.logoUrl) ?? "/favicon.svg"} alt="" style={{ width: '100%', height: '100%', borderRadius: '20%' }} /></div>
 
                     <div>
-                        <h2 className="login-logo-title">{empresaData?.nome ?? 'Bem-vindo (a)'}</h2>
-                        <p className="login-logo-sub">Insira suas credenciais para acessar o sistema</p>
+                        <h2 className="login-logo-title">{empresaData?.nome ?? 'RentalManager'}</h2>
                     </div>
                 </div>
 
