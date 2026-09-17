@@ -188,7 +188,7 @@ export function UsuarioForm({ defaultValues, isEditing, onSubmit, groups = [] }:
                                         onChange={(e) => field.onChange(e.target.checked)}
                                     />
                                 }
-                                label="Master — acesso total a módulos e documentos"
+                                label="Master"
                             />
                         )}
                     />
