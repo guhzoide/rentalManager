@@ -1,5 +1,5 @@
 import { base64Image } from '@/lib/images';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import TextField from '@mui/material/TextField';
@@ -10,7 +10,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { z } from 'zod';
 import { signIn } from '@/lib/auth-client';
 import { toast } from 'react-toastify';
-import { LOGIN_STYLES } from '@/utils/loginUtils';
+import '@/styles/LoginPage.css';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 
 const loginSchema = z.object({
@@ -29,23 +29,6 @@ interface LoginPageProps {
 export function LoginPage({ onLoginSuccess, empresaData, empresaLoading = false }: LoginPageProps) {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-
-    useEffect(() => {
-        const styleId = 'login-page-styles';
-        let styleEl = document.getElementById(styleId);
-        if (!styleEl) {
-            styleEl = document.createElement('style');
-            styleEl.id = styleId;
-            styleEl.innerHTML = LOGIN_STYLES;
-            document.head.appendChild(styleEl);
-        }
-        return () => {
-            const el = document.getElementById(styleId);
-            if (el) {
-                el.remove();
-            }
-        };
-    }, []);
 
     const {
         control,
