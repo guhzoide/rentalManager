@@ -10,7 +10,11 @@
     "lint": "eslint .",
     "migrate:data": "bun scripts/migrate-mongodb-to-postgres.ts",
     "preview": "vite preview",
-    "postinstall": "bun patch-es-toolkit.js"
+    "postinstall": "bun patch-es-toolkit.js",
+    "seed:load": "bun scripts/seed-load.ts",
+    "seed:verify": "bun scripts/verify-load.ts",
+    "seed:refresh": "bun scripts/refresh-load.ts",
+    "seed:expenses": "bun scripts/seed-expenses.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.11",

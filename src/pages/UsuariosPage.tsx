@@ -1,3 +1,5 @@
+import { useGridColumns } from '@/hooks/useGridColumns';
+import { useGridPagination } from '@/hooks/useGridPagination';
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
@@ -19,25 +21,26 @@ interface Usuario {
 }
 
 const columns: Column<Usuario>[] = [
-    { key: 'nome', label: 'Nome' },
+    { key: 'nome', field: 'name', label: 'Nome' },
     { key: 'email', label: 'E-mail' },
     {
-        key: 'master',
+        key: 'master', filterType: 'boolean',
         label: 'Master',
         render: (v: any) => v ? <span className="badge badge-accent">Sim</span> : <span style={{ color: 'var(--text-muted)' }}>Não</span>
     },
-    { key: 'grupoCodigo', label: 'Grupo', render: (_, row) => row.grupoCodigo
+    { key: 'grupoCodigo', filterType: 'number', label: 'Grupo', render: (_, row) => row.grupoCodigo
         ? `${row.grupoCodigo} — ${row.grupoNome || 'Grupo'}`
         : row.master ? 'Acesso total' : 'Sem grupo' },
     {
-        key: 'atendente',
+        key: 'atendente', filterType: 'boolean',
         label: 'Atendente',
         render: (v: any) => v ? <span className="badge badge-accent">Sim</span> : <span style={{ color: 'var(--text-muted)' }}>Não</span>
     },
 ];
 
 export function UsuariosPage() {
-    const [page, setPage] = useState(1);
+    const { page, setPage, pageSize, onPageSizeChange } = useGridPagination();
+    const gridColumns = useGridColumns(columns, setPage);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Partial<Usuario> | null>(null);
     const [formKey, setFormKey] = useState(0); // força reset do form ao abrir
@@ -70,15 +73,12 @@ export function UsuariosPage() {
     const utils = trpc.useUtils();
 
     const { data: usuariosData, isLoading: isLoadingList } = trpc.usuarios.list.useQuery({
+        ...gridColumns.query,
         pagina: page,
-        limit: 20
+        limit: pageSize
     });
-    const { data: gruposData } = trpc.grupos.list.useQuery({ pagina: 1, limit: 1000 });
-    const groups = (gruposData?.data ?? []) as Array<{ codigo: number; nome: string }>;
-    const usuarios = (usuariosData?.data ?? []).map((user: any) => ({
-        ...user,
-        grupoNome: groups.find((group) => group.codigo === user.grupoCodigo)?.nome ?? null,
-    }));
+    const groups = editing?.grupoCodigo && editing.grupoNome ? [{ codigo: editing.grupoCodigo, nome: editing.grupoNome }] : [];
+    const usuarios = usuariosData?.data ?? [];
 
     const createMutation = trpc.usuarios.create.useMutation({
         onSuccess: () => {
@@ -138,8 +138,9 @@ export function UsuariosPage() {
     const isPending = createMutation.isPending || updateMutation.isPending;
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div className="grid-page">
             <DataGrid
+                {...gridColumns.props}
                 columns={columns}
                 data={usuarios}
                 loading={isLoadingList}
@@ -148,7 +149,8 @@ export function UsuariosPage() {
                 total={usuariosData?.total || 0}
                 page={page}
                 onPageChange={(p) => setPage(p)}
-                pageSize={20}
+                pageSize={pageSize}
+                onPageSizeChange={onPageSizeChange}
                 emptyText="Nenhum usuário cadastrado."
             />
 

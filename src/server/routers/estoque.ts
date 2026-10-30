@@ -18,6 +18,7 @@ export const estoqueRouter = router({
         input.filtros = {
           ...input.filtros,
           ativo: true,
+          exibirCatalogo: true,
         };
       }
       const result = await getPaginatedResult<EstoqueComCategoria>(prisma.estoques, input, {
@@ -27,6 +28,7 @@ export const estoqueRouter = router({
         ...result,
         data: result.data.map((item) => ({
           ...item,
+          exibirCatalogo: item.exibirCatalogo,
           imageUrl: base64Image(item.imageUrl),
           imageUrls: base64Gallery(item.imageUrls),
         })),

@@ -1,4 +1,5 @@
-import Autocomplete from '@mui/material/Autocomplete';
+import { RemoteAutocomplete } from '@/components/ui/RemoteAutocomplete';
+import type { RemoteOption } from '@/lib/remoteOptions';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
@@ -48,6 +49,7 @@ interface AgendaFormProps {
     clientes: SelectItem[];
     filteredEnderecos: SelectEndereco[];
     errors?: Partial<Record<string, string>>;
+    onItemOption?: (option: RemoteOption) => void;
 }
 
 export function AgendaForm({
@@ -72,6 +74,7 @@ export function AgendaForm({
     clientes,
     filteredEnderecos,
     errors = {},
+    onItemOption,
 }: AgendaFormProps) {
     const handleAddItem = () => {
         setSelectedItens([...selectedItens, { itemId: '', quantidade: 1 }]);
@@ -90,8 +93,6 @@ export function AgendaForm({
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
-    const selectedCliente = clientes.find((c) => c.id === clienteId) ?? null;
-    const selectedEndereco = filteredEnderecos.find((e) => e.id === enderecoId) ?? null;
 
     return (
         <div className="agenda-form-grid">
@@ -147,41 +148,29 @@ export function AgendaForm({
                                 return { ...i, currentAvailable, isUnavailable: currentAvailable <= 0 && !isCurrent };
                             });
 
-                            const selectedItemObj = itemOptions.find((i) => i.id === selected.itemId) ?? null;
+                            const resolveOption = (option: RemoteOption) => itemOptions.find((item) => item.id === option.id) ?? {
+                                ...option,
+                                currentAvailable: (option.disponivel ?? 0) - selectedItens.filter((_, index) => index !== idx)
+                                    .reduce((sum, item) => sum + (item.itemId === option.id ? item.quantidade : 0), 0),
+                                isUnavailable: (option.disponivel ?? 0) <= 0 && option.id !== selected.itemId,
+                            };
 
                             return (
                                 <div key={idx} className="agenda-item-row" style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', width: '100%' }}>
                                     {/* Autocomplete Item */}
                                     <div style={{ flex: 1 }}>
-                                        <Autocomplete
-                                            options={itemOptions}
-                                            getOptionLabel={(opt) => {
-                                                const price = opt.valorDiaria !== undefined
-                                                    ? ` (${formatCurrency(opt.valorDiaria)}/dia)`
-                                                    : '';
-                                                const avail = opt.isUnavailable
-                                                    ? ' — Esgotado'
-                                                    : ` — ${opt.currentAvailable} disponível`;
-                                                return `${opt.nome}${price}${avail}`;
+                                        <RemoteAutocomplete tipo="itens" label="Item *" size="small"
+                                            valueId={selected.itemId} initialOptions={itemOptions}
+                                            onChange={(option) => {
+                                                if (option) onItemOption?.(option);
+                                                handleItemChange(idx, 'itemId', option?.id ?? '');
                                             }}
-                                            getOptionDisabled={(opt) => opt.isUnavailable}
-                                            value={selectedItemObj}
-                                            onChange={(_, newVal) =>
-                                                handleItemChange(idx, 'itemId', newVal?.id ?? '')
-                                            }
-                                            isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                                            size="small"
-                                            fullWidth
-                                            noOptionsText="Nenhum item encontrado"
-                                            renderInput={(params) => (
-                                                <TextField
-                                                    {...params}
-                                                    label="Item *"
-                                                    variant="outlined"
-                                                    error={!!errors[`item_${idx}`]}
-                                                    helperText={errors[`item_${idx}`]}
-                                                />
-                                            )}
+                                            formatOption={(option) => {
+                                                const current = resolveOption(option);
+                                                return `${option.nome} (${formatCurrency(option.valorDiaria ?? 0)}/dia) — ${current.currentAvailable > 0 ? `${current.currentAvailable} disponível` : 'Esgotado'}`;
+                                            }}
+                                            isOptionDisabled={(option) => resolveOption(option).isUnavailable}
+                                            error={!!errors[`item_${idx}`]} helperText={errors[`item_${idx}`]}
                                         />
                                     </div>
 
@@ -219,57 +208,23 @@ export function AgendaForm({
 
             {/* ── Cliente ── */}
             <div>
-                <Autocomplete
-                    options={clientes}
-                    getOptionLabel={(opt) => opt.nome}
-                    value={selectedCliente}
-                    onChange={(_, newVal) => {
-                        setClienteId(newVal?.id ?? '');
-                        setEnderecoId(''); // limpa endereço ao trocar cliente
-                    }}
-                    isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                    fullWidth
-                    noOptionsText="Nenhum cliente encontrado"
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Cliente *"
-                            variant="outlined"
-                            error={!!errors.clienteId}
-                            helperText={errors.clienteId}
-                        />
-                    )}
+                <RemoteAutocomplete tipo="clientes" label="Cliente *"
+                    valueId={clienteId} initialOptions={clientes}
+                    onChange={(option) => { setClienteId(option?.id ?? ''); setEnderecoId(''); }}
+                    error={!!errors.clienteId} helperText={errors.clienteId}
                 />
             </div>
 
             {/* ── Endereço ── */}
             <div>
-                <Autocomplete
-                    options={filteredEnderecos}
-                    getOptionLabel={(opt) => [
-                        `${opt.rua}, ${opt.numero}`,
-                        opt.bairro,
-                        `CEP ${opt.cep}`,
-                    ].filter(Boolean).join(' — ')}
-                    value={selectedEndereco}
-                    onChange={(_, newVal) => setEnderecoId(newVal?.id ?? '')}
-                    isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                    disabled={!clienteId}
-                    fullWidth
-                    noOptionsText={
-                        !clienteId
-                            ? 'Selecione um cliente primeiro'
-                            : 'Nenhum endereço cadastrado'
-                    }
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Endereço do Cliente *"
-                            variant="outlined"
-                            error={!!errors.enderecoId}
-                            helperText={errors.enderecoId}
-                        />
-                    )}
+                <RemoteAutocomplete key={clienteId} tipo="enderecos" label="Endereço do Cliente *"
+                    valueId={enderecoId} clienteId={clienteId} disabled={!clienteId}
+                    initialOptions={filteredEnderecos.map((option) => ({
+                        id: option.id, clienteId: option.clienteId,
+                        nome: [`${option.rua}, ${option.numero}`, option.bairro, `CEP ${option.cep}`].filter(Boolean).join(' — '),
+                    }))}
+                    onChange={(option) => setEnderecoId(option?.id ?? '')}
+                    error={!!errors.enderecoId} helperText={errors.enderecoId ?? (!clienteId ? 'Selecione um cliente primeiro' : undefined)}
                 />
             </div>
 

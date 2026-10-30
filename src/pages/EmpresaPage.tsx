@@ -16,7 +16,7 @@ export function EmpresaPage() {
     const updateMutation = trpc.empresa.update.useMutation({
         onSuccess: () => {
             toast.success('Configurações da empresa salvas com sucesso!');
-            utils.empresa.list.invalidate();
+            utils.empresa.list.invalidate(); void utils.seletores.invalidate();
             utils.empresa.catalog.invalidate();
             utils.empresa.listAll.invalidate();
         },

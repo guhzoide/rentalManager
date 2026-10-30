@@ -173,7 +173,7 @@ export function ClientForm({
                     }}>
                         🏠 Endereços adicionais
                     </h3>
-                    <div style={{ flex: 1, minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
+                    <div className="address-grid-container">
                         <DataGrid
                             columns={addressColumns}
                             data={additionalAddresses}

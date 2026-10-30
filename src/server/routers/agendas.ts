@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { agendaFiltersSchema, agendaSearchSchema, agendaWhere, agendaOrderBy } from '../utils/agendaFilters.js';
 import { TRPCError } from '@trpc/server';
 import { moduleProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
 import { agendaSchema, agendaUpdateSchema } from '../../lib/schemas.js';
 import { type agendas } from '@prisma/client';
+import { agendaStatus } from '../utils/agendaStatus.js';
 
 async function reserveItems(tx: any, items: { itemId: string; quantidade: number }[]) {
     const quantitiesByItem = new Map<string, number>();
@@ -43,6 +45,69 @@ async function releaseItems(tx: any, items: { itemId: string; quantidade: number
 }
 
 export const agendaRouter = router({
+    search: moduleProcedure('agenda')
+        .input(agendaSearchSchema)
+        .query(async ({ input, ctx }) => {
+            const now = new Date();
+            const where = agendaWhere(input, now);
+            const [total, data] = await Promise.all([
+                ctx.prisma.agendas.count({ where }),
+                ctx.prisma.agendas.findMany({
+                    where,
+                    orderBy: agendaOrderBy(input.sort),
+                    skip: (input.pagina - 1) * input.limit,
+                    take: input.limit,
+                    select: {
+                        id: true, data: true, dataColeta: true, observacao: true,
+                        desconto: true, frete: true, valorTotal: true, entregue: true, concluida: true,
+                        clientes: { select: { id: true, nome: true } },
+                        enderecos: { select: { id: true, rua: true, numero: true, bairro: true, cep: true, complemento: true } },
+                        itens: { select: {
+                            id: true, itemId: true, quantidade: true,
+                            estoques: { select: { nome: true, valorDiaria: true, disponivel: true } },
+                        } },
+                    },
+                }),
+            ]);
+            return {
+                data: data.map((agenda) => ({ ...agenda, status: agendaStatus(agenda, now.getTime()) })),
+                total, totalPaginas: Math.ceil(total / input.limit),
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            };
+        }),
+
+    filterOptions: moduleProcedure('agenda')
+        .input(z.object({
+            tipo: z.enum(['clientes', 'itens']),
+            busca: z.string().trim().max(100).default(''),
+            cursor: z.number().int().min(0).nullish(),
+            limit: z.number().int().min(1).max(50).default(30),
+        }))
+        .query(async ({ input }) => {
+            const args = {
+                where: input.busca ? { nome: { contains: input.busca, mode: 'insensitive' as const } } : {},
+                select: { id: true, nome: true },
+                orderBy: [{ nome: 'asc' as const }, { id: 'asc' as const }],
+                skip: input.cursor ?? 0,
+                take: input.limit + 1,
+            };
+            const rows = input.tipo === 'clientes'
+                ? await prisma.clientes.findMany(args)
+                : await prisma.estoques.findMany(args);
+            return {
+                data: rows.slice(0, input.limit),
+                nextCursor: rows.length > input.limit ? (input.cursor ?? 0) + input.limit : undefined,
+            };
+        }),
+
+    pendingDeliveryDates: moduleProcedure('agenda')
+        .input(agendaFiltersSchema.extend({ inicio: z.coerce.date(), fim: z.coerce.date() }))
+        .query(({ input }) => prisma.agendas.findMany({
+            where: agendaWhere(input),
+            select: { data: true },
+            distinct: ['data'],
+        })),
+
     list: moduleProcedure(['agenda', 'financeiro', 'canvas'])
         .input(paginationSchema)
         .query(async ({ input }) => {
@@ -61,8 +126,8 @@ export const agendaRouter = router({
 
     create: moduleProcedure('agenda')
         .input(agendaSchema)
-        .mutation(async ({ input }) => {
-            return prisma.$transaction(async (tx) => {
+        .mutation(async ({ input, ctx }) => {
+            return ctx.prisma.$transaction(async (tx) => {
                 if (!input.concluida) {
                     await reserveItems(tx, input.itens);
                 }
@@ -78,6 +143,7 @@ export const agendaRouter = router({
                         desconto: input.desconto,
                         frete: input.frete,
                         valorTotal: input.valorTotal,
+                        entregue: input.entregue,
                         concluida: input.concluida,
                         itens: {
                             create: input.itens.map((i) => ({
@@ -103,8 +169,9 @@ export const agendaRouter = router({
             id: z.string(),
             data: agendaUpdateSchema,
         }))
-        .mutation(async ({ input }) => {
-            return prisma.$transaction(async (tx) => {
+        .mutation(async ({ input, ctx }) => {
+            return ctx.prisma.$transaction(async (tx) => {
+                await tx.$queryRaw`SELECT id FROM agendas WHERE id = ${input.id} FOR UPDATE`;
                 // Buscar agendamento atual para verificar se existe
                 const currentAgenda = await tx.agendas.findUnique({
                     where: { id: input.id },
@@ -167,9 +234,10 @@ export const agendaRouter = router({
 
     delete: moduleProcedure('agenda')
         .input(z.object({ id: z.string() }))
-        .mutation(async ({ input }) => {
-            return prisma.$transaction(async (tx) => {
-                // Somente agendas ainda abertas possuem itens reservados no estoque.
+        .mutation(async ({ input, ctx }) => {
+            return ctx.prisma.$transaction(async (tx) => {
+                await tx.$queryRaw`SELECT id FROM agendas WHERE id = ${input.id} FOR UPDATE`;
+                // Somente agendas ainda não coletadas possuem itens reservados no estoque.
                 const agenda = await tx.agendas.findUnique({
                     where: { id: input.id },
                     include: { itens: true },

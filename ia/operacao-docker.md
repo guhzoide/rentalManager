@@ -86,4 +86,29 @@ As operações usam token, bloqueio no PostgreSQL contra execuções simultânea
 
 Para próximas versões, adicione e versione as migrations no projeto antes de distribuir a imagem; o cliente aplica as pendências pela mesma página, sem comandos manuais.
 
+Bancos sem histórico são comparados também com `prisma/baseline-slogan.prisma` e
+`prisma/baseline-categories.prisma`. Apenas após uma correspondência exata, o
+deploy registra as migrations já presentes naquela versão e aplica as restantes.
+
 Os snapshots de baseline são imutáveis: não os atualize junto com o schema de novas versões. Os títulos das migrations podem ser descritos em `src/server/deployment/updates.ts`; migrations novas são detectadas automaticamente mesmo sem título personalizado.
+
+## Versão com controle de exibição no catálogo
+
+A migration `20261027000000_catalog_visibility` adiciona
+`estoques.exibirCatalogo` como `BOOLEAN NOT NULL DEFAULT true`. Produtos existentes
+mantêm a exibição habilitada; o catálogo exige também `ativo = true`.
+
+Após publicar a imagem e atualizar a stack no Portainer, abra `/deploy`, valide o
+`DEPLOYTOKEN`, teste a conexão e aplique **Atualizar banco**. A pendência aparece
+como **Controle de exibição dos produtos no catálogo**. O container não aplica
+migrations ao iniciar; conclua a atualização antes de liberar o uso do catálogo
+e do estoque. Não é necessário recriar empresa ou usuário master.
+
+Confira após a atualização: um produto ativo aparece com o switch ligado,
+desaparece ao desligá-lo e volta ao religá-lo. Um produto inativo permanece
+oculto em ambos os casos. Verifique o catálogo também sem autenticação.
+
+A atualização **Índices para filtros e paginação da agenda** aplica a migration
+`20261027000100_agenda_filters`. Ela cria os índices de status/data, cliente,
+itens e ordenação das opções em uma transação, com limites de espera por bloqueios e tempo de execução. Aplique pelo mesmo fluxo de `/deploy` para obter os índices da nova
+consulta da agenda.

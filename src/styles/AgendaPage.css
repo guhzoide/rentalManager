@@ -1,0 +1,24 @@
+.agenda-confirmation { display: inline-flex; align-items: center; min-height: 44px; }
+.agenda-status { display: inline-flex; align-items: center; border: 1px solid currentColor; border-radius: 6px; padding: 5px 8px; font-size: 11px; line-height: 1.5; }
+.agenda-status--danger { color: var(--danger); }
+.agenda-status--warning { color: var(--warning, #d99b21); }
+.agenda-status--success { color: var(--success); }
+.agenda-status--pending { color: var(--text-secondary); }
+
+.agenda-page .agenda-row--danger { --agenda-row-color: var(--danger); }
+.agenda-page .agenda-row--warning { --agenda-row-color: var(--warning, #d99b21); }
+.agenda-page .agenda-row--success { --agenda-row-color: var(--success); }
+@media (max-width: 768px) {
+    .agenda-page .cardgrid .datagrid-mobile-card:is(.agenda-row--danger, .agenda-row--warning, .agenda-row--success) {
+        background: color-mix(in srgb, var(--agenda-row-color) 14%, var(--bg-secondary));
+        border-color: var(--agenda-row-color);
+    }
+}
+
+.agenda-delivery-address { display: flex; flex-direction: column; gap: 4px; min-width: 180px; overflow-wrap: anywhere; }
+.agenda-delivery-address small { color: var(--text-secondary); font-size: 11px; }
+@media (max-width: 768px) { .agenda-delivery-address { min-width: 0; } }
+
+@media (max-width: 768px) {
+    .agenda-page .datagrid-actions .btn > span:not(.badge) { display: none; }
+}

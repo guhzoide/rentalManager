@@ -1,4 +1,5 @@
 import { router } from '../trpc.js';
+import { seletoresRouter } from './seletores.js';
 import { clienteRouter } from './clientes.js';
 import { estoqueRouter } from './estoque.js';
 import { usuarioRouter } from './usuarios.js';
@@ -11,6 +12,7 @@ import { documentoRouter } from './documentos.js';
 import { grupoRouter } from './grupos.js';
 import { deployRouter } from './deploy.js';
 export const appRouter = router({
+  seletores: seletoresRouter,
   deploy: deployRouter,
   clientes: clienteRouter,
   estoque: estoqueRouter,

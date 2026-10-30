@@ -85,6 +85,7 @@ export const estoqueSchema = z.object({
     quantidade: z.number({ error: 'Informe um número válido' }).int('Deve ser inteiro').min(0, 'Quantidade não pode ser negativa'),
     disponivel: z.number({ error: 'Informe um número válido' }).int('Deve ser inteiro').min(0, 'Quantidade não pode ser negativa'),
     ativo: z.boolean(),
+    exibirCatalogo: z.boolean().default(true),
     imageUrl: imageDataSchema.optional(),
     imageUrls: z.array(imageDataSchema).max(MAX_GALLERY_IMAGES, 'Adicione no máximo 8 imagens à galeria').default([]),
 });
@@ -108,6 +109,7 @@ export const agendaSchema = z.object({
     desconto: z.number().min(0).max(100).default(0),
     frete: z.number().min(0).default(0),
     valorTotal: z.number().min(0).default(0),
+    entregue: z.boolean().default(false),
     concluida: z.boolean().default(false),
 });
 
@@ -123,6 +125,7 @@ export const agendaUpdateSchema = z.object({
     desconto: z.number().min(0).max(100).optional(),
     frete: z.number().min(0).optional(),
     valorTotal: z.number().min(0).optional(),
+    entregue: z.boolean().optional(),
     concluida: z.boolean().optional(),
 });
 

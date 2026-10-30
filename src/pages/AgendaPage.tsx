@@ -1,15 +1,22 @@
+import { useGridColumns } from '@/hooks/useGridColumns';
+import { useGridPagination } from '@/hooks/useGridPagination';
 import { useState, useMemo } from 'react';
+import '@/styles/AgendaPage.css';
 import { trpc } from '@/lib/trpc';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import ClearIcon from '@mui/icons-material/Clear';
 import Switch from '@mui/material/Switch';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { toast } from 'react-toastify';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
+import { AgendaFilters, type AgendaFilterOption } from '@/components/forms/AgendaFilters';
 import { AgendaForm } from '@/components/forms/AgendaForm';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { Modal } from '@/components/ui/Modal';
 import { agendaSchema } from '@/lib/schemas';
+import { mergeAgendaOptions } from '@/lib/agendaOptions';
+import type { RemoteOption } from '@/lib/remoteOptions';
 
 dayjs.locale('pt-br');
 
@@ -26,10 +33,12 @@ interface AgendaItem {
     desconto?: number;
     frete?: number;
     valorTotal?: number;
+    entregue: boolean;
     concluida: boolean;
-    itens: { id: string; itemId: string; quantidade: number; estoques: { nome: string; valorDiaria?: number } }[];
+    status: { cor: 'success' | 'danger' | 'warning' | 'pending'; texto: string };
+    itens: { id: string; itemId: string; quantidade: number; estoques: { nome: string; valorDiaria?: number; disponivel: number } }[];
     cliente: { id: string; nome: string };
-    endereco: { id: string; rua: string; numero: string; bairro?: string | null; cep: string };
+    endereco: { id: string; rua: string; numero: string; bairro?: string | null; cep: string; complemento?: string | null };
 }
 
 interface SelectItem { id: string; nome: string; disponivel?: number; valorDiaria?: number; }
@@ -41,47 +50,56 @@ const MONTHS = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-function getAgendaColumns(onCompletionChange: (agenda: AgendaItem, concluida: boolean) => void): Column<AgendaItem>[] {
+function getAgendaColumns(onStatusChange: (agenda: AgendaItem, field: 'entregue' | 'concluida', checked: boolean) => void, saving: boolean, timeZone: string): Column<AgendaItem>[] {
+    const dateFormat = new Intl.DateTimeFormat('pt-BR', { timeZone, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     return [
     {
         key: 'itens',
-        label: 'Itens Locados',
+        label: 'Itens Locados', sortable: false, mobileLayout: 'stacked',
         render: (_, row) => row.itens?.map(i => `${i.quantidade}x ${i.estoques?.nome}`).join(', ') || '—'
     },
     { key: 'cliente', label: 'Cliente', render: (_, row) => row.cliente?.nome },
     {
-        key: 'dataColeta',
-        label: 'Entrega ➜ Coleta',
-        render: (_, row) => {
-            const ent = dayjs(row.data).format('DD/MM HH:mm');
-            const col = dayjs(row.dataColeta).format('DD/MM HH:mm');
-            return `${ent} ➜ ${col}`;
-        }
+        key: 'endereco', label: 'Endereço de entrega', mobileLayout: 'stacked',
+        render: (_, row) => <span className="agenda-delivery-address">
+            <span>{[row.endereco.rua, row.endereco.numero, row.endereco.complemento].filter(Boolean).join(', ')}</span>
+            <small>{[row.endereco.bairro, row.endereco.cep && `CEP ${row.endereco.cep}`].filter(Boolean).join(' • ')}</small>
+        </span>,
     },
+    { key: 'data', label: 'Entrega', mobileLayout: 'half', filterType: 'date', render: (_, row) => dateFormat.format(new Date(row.data)) },
+    { key: 'dataColeta', label: 'Coleta', mobileLayout: 'half', filterType: 'date', render: (_, row) => dateFormat.format(new Date(row.dataColeta)) },
     {
         key: 'valorTotal',
-        label: 'Total',
+        label: 'Total', filterType: 'number',
         render: (_, row) => {
             const val = row.valorTotal ?? 0;
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
         }
     },
-    { key: 'observacao', label: 'Observações', render: (_, row) => row.observacao || '—' },
+    { key: 'observacao', label: 'Observações', mobileLayout: 'stacked', render: (_, row) => row.observacao || '—' },
     {
-        key: 'concluida',
-        label: 'Concluída',
-        width: '110px',
-        render: (_, row) => (
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} onClick={(event) => event.stopPropagation()}>
-                <Switch
-                    checked={row.concluida ?? false}
-                    style={{ color: 'var(--text-primary)' }}
-                    onChange={(event) => onCompletionChange(row, event.target.checked)}
-                />
-                {/* <span>{row.concluida ? 'Sim' : 'Não'}</span> */}
-            </label>
-        ),
+        key: 'status', label: 'Situação', sortable: false, filterType: 'select',
+        filterOptions: [
+            { value: 'danger', label: 'Em atraso' }, { value: 'warning', label: 'Em até 1 hora' },
+            { value: 'success', label: 'Entregue e coletada' }, { value: 'pending', label: 'Pendente sem alerta' },
+        ],
+        render: (_, row) => <span className={`agenda-status agenda-status--${row.status.cor}`}>{row.status.texto}</span>,
     },
+    ...(['entregue', 'concluida'] as const).map((field) => ({
+        key: field, filterType: 'boolean' as const, mobileLayout: 'half' as const,
+        label: field === 'entregue' ? 'Entregue' : 'Coletada',
+        width: '100px',
+        render: (_: unknown, row: AgendaItem) => (
+            <span className="agenda-confirmation" onClick={(event) => event.stopPropagation()}>
+                <Switch
+                    checked={row[field]}
+                    disabled={saving}
+                    slotProps={{ input: { 'aria-label': `${field === 'entregue' ? 'Entrega' : 'Coleta'} confirmada — ${row.cliente.nome}` } }}
+                    onChange={(_, checked) => onStatusChange(row, field, checked)}
+                />
+            </span>
+        ),
+    })),
 ];
 }
 
@@ -91,10 +109,16 @@ export function AgendaPage() {
     const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
     const [selectedAgenda, setSelectedAgenda] = useState<AgendaItem | null>(null);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const { page, setPage, pageSize, onPageSizeChange } = useGridPagination();
+    const [clienteFilter, setClienteFilter] = useState<AgendaFilterOption | null>(null);
+    const [itemFilter, setItemFilter] = useState<AgendaFilterOption | null>(null);
+    const [concluidaFilter, setConcluidaFilter] = useState(false);
 
+    const gridColumns = useGridColumns([], setPage);
     const utils = trpc.useUtils();
 
     // Form state
+    const [knownItems, setKnownItems] = useState<RemoteOption[]>([]);
     const [selectedItens, setSelectedItens] = useState<SelectedItemState[]>([]);
     const [clienteId, setClienteId] = useState('');
     const [enderecoId, setEnderecoId] = useState('');
@@ -133,23 +157,30 @@ export function AgendaPage() {
     };
 
     // Queries
-    const { data: agendasRes } = trpc.agendas.list.useQuery({
-        pagina: 1,
-        limit: 100,
-        filtros: {
-            data: {
-                gte: current.startOf('month').toISOString(),
-                lte: current.endOf('month').toISOString(),
-            }
-        }
-    });
+    const filters = {
+        concluida: concluidaFilter,
+        clienteId: clienteFilter?.id,
+        itemId: itemFilter?.id,
+        colunas: gridColumns.appliedFilters,
+    };
+    const { data: agendasRes, isLoading: isLoadingAgendas, isError: agendasError, refetch: refetchAgendas } = trpc.agendas.search.useQuery({
+        ...filters,
+        pagina: page,
+        limit: pageSize,
+        sort: gridColumns.props.sort ?? undefined,
+        inicio: selectedDate?.startOf('day').toISOString(),
+        fim: selectedDate?.endOf('day').toISOString(),
+    }, { refetchInterval: 30_000 });
 
-    const { data: itensRes } = trpc.estoque.list.useQuery({ limit: 200 });
-    const { data: clientesRes } = trpc.clientes.list.useQuery({ limit: 200 });
-    const { data: enderecosRes } = trpc.enderecos.list.useQuery({ limit: 500 });
+    const { data: pendingDeliveryDates } = trpc.agendas.pendingDeliveryDates.useQuery({
+        ...filters,
+        inicio: current.startOf('month').startOf('week').toISOString(),
+        fim: current.endOf('month').endOf('week').toISOString(),
+    }, { enabled: isCalendarOpen });
+
 
     const agendas = useMemo(() => {
-        return (agendasRes?.data || []).map((a: any) => ({
+        return (agendasRes?.data || []).map((a) => ({
             id: a.id,
             data: a.data,
             dataColeta: a.dataColeta,
@@ -157,7 +188,9 @@ export function AgendaPage() {
             desconto: a.desconto ?? 0,
             frete: a.frete ?? 0,
             valorTotal: a.valorTotal ?? 0,
-            concluida: a.concluida ?? false,
+            entregue: a.entregue,
+            concluida: a.concluida,
+            status: a.status,
             itens: a.itens || [],
             cliente: { id: a.clientes?.id, nome: a.clientes?.nome },
             endereco: {
@@ -166,13 +199,30 @@ export function AgendaPage() {
                 numero: a.enderecos?.numero,
                 bairro: a.enderecos?.bairro,
                 cep: a.enderecos?.cep,
+                complemento: a.enderecos?.complemento,
             }
         })) as AgendaItem[];
     }, [agendasRes]);
 
-    const itens = (itensRes?.data || []) as unknown as SelectItem[];
-    const clientes = (clientesRes?.data || []) as unknown as SelectItem[];
-    const enderecos = (enderecosRes?.data || []) as unknown as SelectEndereco[];
+    // O registro em edição não depende de aparecer na primeira página dos combos.
+    const itens = useMemo(() => {
+        const options = mergeAgendaOptions<SelectItem>(knownItems, selectedAgenda?.itens.map((item) => ({
+            id: item.itemId, ...item.estoques,
+        })) ?? []);
+        return options.map((item) => ({
+            ...item,
+            // A própria reserva também pode ser mantida ou redistribuída na edição.
+            disponivel: (item.disponivel ?? 0) + (selectedAgenda && !selectedAgenda.concluida
+                ? selectedAgenda.itens.reduce((sum, reserved) => sum + (reserved.itemId === item.id ? reserved.quantidade : 0), 0)
+                : 0),
+        }));
+    }, [knownItems, selectedAgenda]);
+    const clientes = useMemo(() => mergeAgendaOptions<SelectItem>(
+        [], selectedAgenda ? [selectedAgenda.cliente] : [],
+    ), [selectedAgenda]);
+    const enderecos = useMemo(() => mergeAgendaOptions<SelectEndereco>(
+        [], selectedAgenda ? [{ ...selectedAgenda.endereco, clienteId: selectedAgenda.cliente.id }] : [],
+    ), [selectedAgenda]);
 
     const valorTotalCalculado = useMemo(() => {
         if (!dataStr || !dataColetaStr) return 0;
@@ -199,8 +249,12 @@ export function AgendaPage() {
     // Mutations
     const saveMutation = trpc.agendas.create.useMutation({
         onSuccess: () => {
+            setPage(1);
             toast.success('Agendamento salvo com sucesso!', { theme: 'colored' });
-            utils.agendas.list.invalidate();
+            utils.agendas.list.invalidate(); void utils.seletores.invalidate();
+            utils.agendas.search.invalidate();
+            utils.transacoes.analytics.invalidate();
+            utils.agendas.pendingDeliveryDates.invalidate();
             utils.estoque.list.invalidate();
             setFormMode('list');
         },
@@ -209,8 +263,12 @@ export function AgendaPage() {
 
     const updateMutation = trpc.agendas.update.useMutation({
         onSuccess: () => {
+            setPage(1);
             toast.success('Agendamento salvo com sucesso!', { theme: 'colored' });
-            utils.agendas.list.invalidate();
+            utils.agendas.list.invalidate(); void utils.seletores.invalidate();
+            utils.agendas.search.invalidate();
+            utils.transacoes.analytics.invalidate();
+            utils.agendas.pendingDeliveryDates.invalidate();
             utils.estoque.list.invalidate();
             setFormMode('list');
         },
@@ -219,8 +277,12 @@ export function AgendaPage() {
 
     const completionMutation = trpc.agendas.update.useMutation({
         onSuccess: () => {
+            setPage(1);
             toast.success('Status da locação atualizado!', { theme: 'colored' });
-            utils.agendas.list.invalidate();
+            utils.agendas.list.invalidate(); void utils.seletores.invalidate();
+            utils.agendas.search.invalidate();
+            utils.transacoes.analytics.invalidate();
+            utils.agendas.pendingDeliveryDates.invalidate();
             utils.estoque.list.invalidate();
         },
         onError: (err) => toast.error(`Erro: ${err.message}`, { theme: 'colored' }),
@@ -228,17 +290,25 @@ export function AgendaPage() {
 
     const deleteMutation = trpc.agendas.delete.useMutation({
         onSuccess: () => {
+            setPage(1);
             setSelectedAgenda(null);
             setFormMode('list');
-            utils.agendas.list.invalidate();
+            utils.agendas.list.invalidate(); void utils.seletores.invalidate();
+            utils.agendas.search.invalidate();
+            utils.transacoes.analytics.invalidate();
+            utils.agendas.pendingDeliveryDates.invalidate();
             utils.estoque.list.invalidate();
         },
         onError: (err) => toast.error(`Erro: ${err.message}`, { theme: 'colored' }),
     });
 
     const agendaColumns = useMemo(
-        () => getAgendaColumns((agenda, concluida) => completionMutation.mutate({ id: agenda.id, data: { concluida } })),
-        [completionMutation],
+        () => getAgendaColumns(
+            (agenda, field, checked) => completionMutation.mutate({ id: agenda.id, data: { [field]: checked } }),
+            completionMutation.isPending,
+            agendasRes?.timeZone ?? 'UTC',
+        ),
+        [completionMutation, agendasRes?.timeZone],
     );
 
     // Filtra endereços pelo cliente selecionado
@@ -247,7 +317,7 @@ export function AgendaPage() {
         return enderecos.filter((e) => e.clienteId === clienteId);
     }, [clienteId, enderecos]);
 
-    const eventDates = new Set(agendas.map((agenda) => dayjs(agenda.data).format('YYYY-MM-DD')));
+    const eventDates = new Set((pendingDeliveryDates ?? []).map((agenda) => dayjs(agenda.data).format('YYYY-MM-DD')));
 
     const buildCalendarDays = () => {
         const start = current.startOf('month');
@@ -272,6 +342,7 @@ export function AgendaPage() {
     const handleDayClick = (date: dayjs.Dayjs) => {
         setCurrent(date.startOf('month'));
         setSelectedDate(date);
+        setPage(1);
         setFormMode('list');
         setIsCalendarOpen(false);
     };
@@ -281,6 +352,8 @@ export function AgendaPage() {
     };
 
     const handleAddClick = () => {
+        setKnownItems([]);
+        setFormErrors({});
         setSelectedAgenda(null);
         setSelectedItens([{ itemId: '', quantidade: 1 }]);
         setClienteId('');
@@ -295,6 +368,8 @@ export function AgendaPage() {
     };
 
     const handleEditClick = (row: AgendaItem) => {
+        setKnownItems([]);
+        setFormErrors({});
         setSelectedAgenda(row);
         setSelectedItens(row.itens.map(i => ({ itemId: i.itemId, quantidade: i.quantidade })));
         setClienteId(String(row.cliente.id));
@@ -362,61 +437,61 @@ export function AgendaPage() {
 
     const days = buildCalendarDays();
     const yearOptions = Array.from({ length: 11 }, (_, index) => today.year() - 5 + index);
-    const filteredAgendas = selectedDate
-        ? agendas.filter((agenda) => dayjs(agenda.data).isSame(selectedDate, 'day'))
-        : agendas;
 
     return (
-        <div className="page-inner">
-            <div className="page-header">
-                <h2>📅 Agenda</h2>
-                <p>Acompanhe e gerencie as locações do mês</p>
-            </div>
-
+        <div className="grid-page agenda-page">
             <div className="agenda-layout">
-                {formMode === 'list' && (
-                    <section className="agenda-form-card agenda-list-card">
-                        <div className="agenda-list-heading">
-                            <div>
-                                <h3>Locações</h3>
-                                <p>
-                                    {selectedDate
-                                        ? `Exibindo locações de ${selectedDate.format('DD/MM/YYYY')}`
-                                        : `${MONTHS[current.month()]} de ${current.year()}`}
-                                </p>
-                            </div>
-                            <div className="agenda-filter-actions">
-                                {selectedDate && (
-                                    <button
-                                        type="button"
-                                        className="btn btn-ghost btn-sm"
-                                        onClick={() => setSelectedDate(null)}
-                                    >
-                                        Limpar filtro
-                                    </button>
-                                )}
-                                <button
-                                    type="button"
-                                    className={`btn ${selectedDate ? 'btn-primary' : 'btn-ghost'} btn-icon`}
-                                    onClick={() => setIsCalendarOpen(true)}
-                                    aria-label="Filtrar locações por data"
-                                    title="Filtrar por data"
-                                >
-                                    <FilterAltIcon fontSize="small" />
-                                </button>
-                            </div>
-                        </div>
-                        <DataGrid
-                            columns={agendaColumns}
-                            data={filteredAgendas}
-                            onAdd={handleAddClick}
-                            onRowClick={handleEditClick}
-                            emptyText={selectedDate
-                                ? 'Nenhuma locação encontrada para esta data.'
-                                : 'Nenhuma locação encontrada neste mês.'}
-                        />
-                    </section>
-                )}
+                <section className="grid-page" aria-label="Locações">
+                    {agendasError && <div role="alert">
+                        Não foi possível carregar as locações.
+                        <button className="btn btn-ghost" onClick={() => void refetchAgendas()}>Tentar novamente</button>
+                    </div>}
+                    <DataGrid
+                        {...gridColumns.props}
+                        activeFilterCount={Number(!!clienteFilter) + Number(!!itemFilter) + Number(concluidaFilter)}
+                        filters={<AgendaFilters
+                            cliente={clienteFilter}
+                            item={itemFilter}
+                            concluida={concluidaFilter}
+                            onClienteChange={(value) => { setClienteFilter(value); setPage(1); }}
+                            onItemChange={(value) => { setItemFilter(value); setPage(1); }}
+                            onConcluidaChange={(value) => { setConcluidaFilter(value); setPage(1); }}
+                        />}
+                        toolbarActions={<>
+                            {selectedDate && <button
+                                type="button"
+                                className="btn btn-ghost btn-sm agenda-clear-date"
+                                aria-label="Limpar filtro de data" title="Limpar filtro de data"
+                                onClick={() => { setSelectedDate(null); setPage(1); }}
+                            >
+                                <ClearIcon fontSize="small" /><span>Limpar data</span>
+                            </button>}
+                            <button
+                                type="button"
+                                className={`btn btn-primary ${selectedDate ? '' : 'btn-icon'}`}
+                                onClick={() => setIsCalendarOpen(true)}
+                                aria-label={selectedDate ? `Filtrar locações por data: ${selectedDate.format('DD/MM/YYYY')}` : 'Filtrar locações por data'}
+                                title="Filtrar por data"
+                            >
+                                <FilterAltIcon fontSize="small" />
+                                {selectedDate && <span>{selectedDate.format('DD/MM/YYYY')}</span>}
+                            </button>
+                        </>}
+                        columns={agendaColumns}
+                        data={agendas}
+                        rowClassName={(row) => `agenda-row--${row.status.cor}`}
+                        loading={isLoadingAgendas}
+                        total={agendasRes?.total ?? 0}
+                        page={page}
+                        pageSize={pageSize}
+                        onPageSizeChange={onPageSizeChange}
+                        onPageChange={setPage}
+                        onRefresh={() => { void refetchAgendas(); void utils.agendas.pendingDeliveryDates.invalidate(); }}
+                        onAdd={handleAddClick}
+                        onRowClick={handleEditClick}
+                        emptyText="Nenhuma locação encontrada para os filtros selecionados."
+                    />
+                </section>
 
                 <Modal
                     title="Filtrar locações por data"
@@ -430,6 +505,7 @@ export function AgendaPage() {
                                 className="btn btn-ghost"
                                 onClick={() => {
                                     setSelectedDate(null);
+                                    setPage(1);
                                     setIsCalendarOpen(false);
                                 }}
                             >
@@ -515,92 +591,70 @@ export function AgendaPage() {
                     </div>
                 </Modal>
 
-                {/* Form */}
-                {(formMode === 'new' || formMode === 'edit') && (
-                    <div className="agenda-form-card mobile-modal">
-                        <div className="agenda-form-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                {formMode === 'new' ? '➕ Novo Agendamento' : '✏️ Editar Agendamento'}
-                                {' — '}
-                                <span style={{ color: 'var(--accent-hover)', fontWeight: 400 }}>
-                                    {dataStr ? dayjs(dataStr).format('DD/MM/YYYY') : 'Data não definida'}
-                                </span>
-                            </div>
-                            <button 
-                                onClick={() => setFormMode('list')}
-                                style={{ 
-                                    background: 'var(--danger-light)', 
-                                    color: 'var(--danger)', 
-                                    border: 'none', 
-                                    borderRadius: '50%', 
-                                    width: 32, 
-                                    height: 32, 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center',
-                                    fontSize: 18,
-                                    cursor: 'pointer' 
+                <Modal
+                    title={`${formMode === 'new' ? 'Novo Agendamento' : 'Editar Agendamento'} — ${dataStr ? dayjs(dataStr).format('DD/MM/YYYY') : 'Data não definida'}`}
+                    open={formMode !== 'list'}
+                    onClose={() => { if (!confirmModal.isOpen) setFormMode('list'); }}
+                    size="lg"
+                    footer={<>
+                        {formMode === 'edit' && selectedAgenda && (
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                disabled={deleteMutation.isPending}
+                                onClick={() => {
+                                    triggerConfirm(
+                                        'Remover agendamento',
+                                        'Tem certeza que deseja remover este agendamento? Os itens retornarão ao estoque disponível.',
+                                        () => deleteMutation.mutate({ id: selectedAgenda.id })
+                                    );
                                 }}
                             >
-                                ×
+                                🗑 Remover
                             </button>
-                        </div>
-
-                        <AgendaForm
-                            selectedItens={selectedItens}
-                            setSelectedItens={setSelectedItens}
-                            clienteId={clienteId}
-                            setClienteId={setClienteId}
-                            enderecoId={enderecoId}
-                            setEnderecoId={setEnderecoId}
-                            observacao={observacao}
-                            setObservacao={setObservacao}
-                            data={dataStr}
-                            setData={setDataStr}
-                            dataColeta={dataColetaStr}
-                            setDataColeta={setDataColetaStr}
-                            desconto={desconto}
-                            setDesconto={setDesconto}
-                            frete={frete}
-                            setFrete={setFrete}
-                            valorTotalCalculado={valorTotalCalculado}
-                            itens={itens}
-                            clientes={clientes}
-                            filteredEnderecos={filteredEnderecos}
-                            errors={formErrors}
-                        />
-
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-                            {formMode === 'edit' && selectedAgenda && (
-                                <button
-                                    className="btn btn-danger"
-                                    onClick={() => {
-                                        triggerConfirm(
-                                            'Remover agendamento',
-                                            'Tem certeza que deseja remover este agendamento? Os itens retornarão ao estoque disponível.',
-                                            () => deleteMutation.mutate({ id: selectedAgenda.id })
-                                        );
-                                    }}
-                                >
-                                    🗑 Remover
-                                </button>
-                            )}
-                            <button
-                                className="btn btn-ghost"
-                                onClick={() => setFormMode('list')}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleSave}
-                                disabled={saveMutation.isPending || updateMutation.isPending}
-                            >
-                                {saveMutation.isPending || updateMutation.isPending ? 'Salvando...' : '💾 Salvar'}
-                            </button>
-                        </div>
-                    </div>
-                )}
+                        )}
+                        <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => setFormMode('list')}
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={handleSave}
+                            disabled={saveMutation.isPending || updateMutation.isPending}
+                        >
+                            {saveMutation.isPending || updateMutation.isPending ? 'Salvando...' : '💾 Salvar'}
+                        </button>
+                    </>}
+                >
+                    <AgendaForm
+                        onItemOption={(option) => setKnownItems((current) => mergeAgendaOptions([option], current))}
+                        selectedItens={selectedItens}
+                        setSelectedItens={setSelectedItens}
+                        clienteId={clienteId}
+                        setClienteId={setClienteId}
+                        enderecoId={enderecoId}
+                        setEnderecoId={setEnderecoId}
+                        observacao={observacao}
+                        setObservacao={setObservacao}
+                        data={dataStr}
+                        setData={setDataStr}
+                        dataColeta={dataColetaStr}
+                        setDataColeta={setDataColetaStr}
+                        desconto={desconto}
+                        setDesconto={setDesconto}
+                        frete={frete}
+                        setFrete={setFrete}
+                        valorTotalCalculado={valorTotalCalculado}
+                        itens={itens}
+                        clientes={clientes}
+                        filteredEnderecos={filteredEnderecos}
+                        errors={formErrors}
+                    />
+                </Modal>
 
                 <ConfirmationModal
                     isOpen={confirmModal.isOpen}

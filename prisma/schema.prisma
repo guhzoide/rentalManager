@@ -36,12 +36,17 @@ model agendas {
   desconto   Float          @default(0)
   frete      Float          @default(0)
   valorTotal Float          @default(0)
-  concluida  Boolean        @default(false)
+  entregue   Boolean        @default(false)
+  concluida  Boolean        @default(false) // Confirmação de coleta (nome preservado para compatibilidade)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   clientes   clientes       @relation(fields: [clienteId], references: [id])
   enderecos  enderecos      @relation(fields: [enderecoId], references: [id])
   itens      agenda_itens[]
+
+  @@index([entregue, data, id])
+  @@index([concluida, data, id])
+  @@index([clienteId, concluida, data, id])
 }
 
 model agenda_itens {
@@ -51,6 +56,9 @@ model agenda_itens {
   quantidade Int      @default(1)
   agendas    agendas  @relation(fields: [agendaId], references: [id], onDelete: Cascade)
   estoques   estoques @relation(fields: [itemId], references: [id])
+
+  @@index([itemId, agendaId])
+  @@index([agendaId])
 }
 
 model clientes {
@@ -63,6 +71,8 @@ model clientes {
   email     String?     @db.Citext
   agendas   agendas[]
   enderecos enderecos[]
+
+  @@index([nome, id])
 }
 
 model enderecos {
@@ -92,6 +102,7 @@ model estoques {
   imageUrl    String?        @db.Text
   imageUrls   String[]       @default([]) @db.Text
   ativo       Boolean        @default(true)
+  exibirCatalogo Boolean      @default(true)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   quantidade  Int            @default(0)
@@ -100,6 +111,7 @@ model estoques {
   itens       agenda_itens[]
 
   @@index([categoriaId])
+  @@index([nome, id])
 }
 
 model categorias {

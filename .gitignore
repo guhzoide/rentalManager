@@ -3,6 +3,7 @@ node_modules
 dist
 to-do
 migrations
+!prisma/migrations/
 
 # Files
 .env

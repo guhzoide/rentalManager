@@ -1,3 +1,5 @@
+import { useGridColumns } from '@/hooks/useGridColumns';
+import { useGridPagination } from '@/hooks/useGridPagination';
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
@@ -37,7 +39,8 @@ const columns: Column<Cliente>[] = [
 ];
 
 export function ClientesPage() {
-    const [page, setPage] = useState(1);
+    const { page, setPage, pageSize, onPageSizeChange } = useGridPagination();
+    const gridColumns = useGridColumns(columns, setPage);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Cliente | null>(null);
     const [formKey, setFormKey] = useState(0);
@@ -64,7 +67,7 @@ export function ClientesPage() {
 
     const utils = trpc.useUtils();
 
-    const { data: clientesData, isLoading: isLoadingList } = trpc.clientes.list.useQuery({ limit: 20 });
+    const { data: clientesData, isLoading: isLoadingList } = trpc.clientes.list.useQuery({ pagina: page, limit: pageSize, ...gridColumns.query });
 
     const { data: addressesData, isLoading: isLoadingAddresses } = trpc.enderecos.byClienteId.useQuery(
         { clienteId: editing?.id as string },
@@ -74,32 +77,32 @@ export function ClientesPage() {
     const additionalAddresses = (addressesData || []).filter((addr: any) => addr.complemento !== 'Principal');
 
     const createMutation = trpc.clientes.create.useMutation({
-        onSuccess: () => { toast.success('Cliente cadastrado com sucesso!'); utils.clientes.list.invalidate(); setModalOpen(false); },
+        onSuccess: () => { toast.success('Cliente cadastrado com sucesso!'); utils.clientes.list.invalidate(); void utils.seletores.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const updateMutation = trpc.clientes.update.useMutation({
-        onSuccess: () => { toast.success('Cliente atualizado com sucesso!'); utils.clientes.list.invalidate(); setModalOpen(false); },
+        onSuccess: () => { toast.success('Cliente atualizado com sucesso!'); utils.clientes.list.invalidate(); void utils.seletores.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const deleteMutation = trpc.clientes.delete.useMutation({
-        onSuccess: () => { toast.success('Cliente removido!'); utils.clientes.list.invalidate(); setModalOpen(false); },
+        onSuccess: () => { toast.success('Cliente removido!'); utils.clientes.list.invalidate(); void utils.seletores.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const createAddressMutation = trpc.enderecos.create.useMutation({
-        onSuccess: () => { toast.success('Endereço adicionado!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); setAddressModalOpen(false); },
+        onSuccess: () => { toast.success('Endereço adicionado!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); void utils.seletores.invalidate(); setAddressModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const updateAddressMutation = trpc.enderecos.update.useMutation({
-        onSuccess: () => { toast.success('Endereço atualizado!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); setAddressModalOpen(false); },
+        onSuccess: () => { toast.success('Endereço atualizado!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); void utils.seletores.invalidate(); setAddressModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const deleteAddressMutation = trpc.enderecos.delete.useMutation({
-        onSuccess: () => { toast.success('Endereço removido!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); setAddressModalOpen(false); },
+        onSuccess: () => { toast.success('Endereço removido!'); utils.enderecos.byClienteId.invalidate({ clienteId: editing?.id as string }); void utils.seletores.invalidate(); setAddressModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
@@ -167,8 +170,9 @@ export function ClientesPage() {
     const isAddrPending = createAddressMutation.isPending || updateAddressMutation.isPending;
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div className="grid-page">
             <DataGrid
+                {...gridColumns.props}
                 columns={columns}
                 data={clientesData?.data || []}
                 loading={isLoadingList}
@@ -177,7 +181,8 @@ export function ClientesPage() {
                 total={clientesData?.total || 0}
                 page={page}
                 onPageChange={(p) => setPage(p)}
-                pageSize={20}
+                pageSize={pageSize}
+                onPageSizeChange={onPageSizeChange}
                 emptyText="Nenhum cliente cadastrado."
             />
 
