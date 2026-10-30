@@ -3,6 +3,9 @@ import { readdir } from 'node:fs/promises';
 
 export const BASELINE_MIGRATION = '20260912000000_baseline';
 export const databaseUpdates = [
+    { id: '20261029000000_agenda_delivery', title: 'Confirmações de entrega e coleta das locações' },
+    { id: '20261027000100_agenda_filters', title: 'Índices para filtros e paginação da agenda' },
+    { id: '20261027000000_catalog_visibility', title: 'Controle de exibição dos produtos no catálogo' },
     { id: '20260912000300_product_categories', title: 'Categorias de produtos e filtros do catálogo' },
     { id: '20260912000200_company_catalog', title: 'Slogan e seção Sobre nós no catálogo' },
     { id: '20260912000100_images_base64', title: 'Armazenamento de imagens em base64' },
@@ -47,22 +50,34 @@ export async function inspectDatabase(client: Database) {
 
 type RunPrisma = (args: string[], allowedExitCodes?: number[]) => Promise<number>;
 
-// Establish a baseline only after verifying the exact known legacy or base64
-// schema. Never mark an arbitrary customer's schema as already migrated.
+// Compare immutable snapshots before recording migrations for databases created by db push.
 export async function migrateDatabase(status: Awaited<ReturnType<typeof inspectDatabase>>, runPrisma: RunPrisma) {
     if (status.hasTables && !status.hasMigrationHistory) {
         const diffArgs = ['migrate', 'diff', '--from-schema-datasource', 'prisma/schema.prisma', '--to-schema-datamodel'];
-        let compatible = false;
-        for (const snapshot of ['prisma/baseline.prisma', 'prisma/baseline-base64.prisma', 'prisma/baseline-slogan.prisma']) {
-            if (await runPrisma([...diffArgs, snapshot, '--exit-code'], [0, 2]) === 0) {
-                compatible = true;
+        const knownVersions = [
+            { snapshot: 'prisma/baseline.prisma', through: BASELINE_MIGRATION },
+            { snapshot: 'prisma/baseline-base64.prisma', through: '20260912000100_images_base64' },
+            { snapshot: 'prisma/baseline-slogan.prisma', through: '20260912000200_company_catalog' },
+            { snapshot: 'prisma/baseline-categories.prisma', through: '20260912000300_product_categories' },
+        ];
+        let matchedVersion: typeof knownVersions[number] | undefined;
+        for (const version of knownVersions) {
+            if (await runPrisma([...diffArgs, version.snapshot, '--exit-code'], [0, 2]) === 0) {
+                matchedVersion = version;
                 break;
             }
         }
-        if (!compatible) {
+        if (!matchedVersion) {
             throw new Error('A estrutura deste banco difere das versões conhecidas. Nenhuma migração foi aplicada; é necessária uma migração de compatibilidade para esta instalação.');
         }
-        await runPrisma(['migrate', 'resolve', '--applied', BASELINE_MIGRATION]);
+        const migrationFolders = await readdir('prisma/migrations', { withFileTypes: true });
+        const alreadyPresent = migrationFolders
+            .filter((entry) => entry.isDirectory() && entry.name <= matchedVersion.through)
+            .map((entry) => entry.name)
+            .sort();
+        for (const migration of alreadyPresent) {
+            await runPrisma(['migrate', 'resolve', '--applied', migration]);
+        }
     }
     await runPrisma(['migrate', 'deploy']);
 }

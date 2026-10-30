@@ -8,7 +8,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import MenuItem from '@mui/material/MenuItem';
+import { RemoteAutocomplete } from '@/components/ui/RemoteAutocomplete';
 import { useState } from 'react';
 import { usuarioCreateSchema, type UsuarioCreateInput } from '@/lib/schemas';
 import { z } from 'zod';
@@ -159,18 +159,12 @@ export function UsuarioForm({ defaultValues, isEditing, onSubmit, groups = [] }:
                         name="grupoCodigo"
                         control={control}
                         render={({ field }) => (
-                            <TextField
-                                select
-                                label="Grupo de acesso"
-                                fullWidth
-                                value={field.value ?? ''}
-                                onChange={(event) => field.onChange(event.target.value === '' ? null : Number(event.target.value))}
-                            >
-                                <MenuItem value="">Sem grupo (sem acesso a módulos)</MenuItem>
-                                {groups.map((group) => <MenuItem key={group.codigo} value={group.codigo}>
-                                    {group.codigo} — {group.nome}
-                                </MenuItem>)}
-                            </TextField>
+                            <RemoteAutocomplete tipo="grupos" label="Grupo de acesso"
+                                valueId={field.value ? String(field.value) : ''}
+                                initialOptions={groups.map((group) => ({ id: String(group.codigo), codigo: group.codigo, nome: `${group.codigo} — ${group.nome}` }))}
+                                onChange={(option) => field.onChange(option?.codigo ?? null)} onBlur={field.onBlur}
+                                helperText="Sem grupo: sem acesso a módulos."
+                            />
                         )}
                     />
                 </div>

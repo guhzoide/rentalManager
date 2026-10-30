@@ -10,6 +10,8 @@ Esta pasta é a fonte de contexto operacional do **Rental Manager**. Consulte es
 4. [operacao-docker.md](./operacao-docker.md): imagem de produção e pipeline GitHub Actions.
 5. [experiencia-mobile.md](./experiencia-mobile.md): diretriz e checklist de interface mobile-first.
 
+6. [dados-de-teste.md](./dados-de-teste.md): carga persistente, usuários fictícios e execução reutilizável.
+
 ## Objetivo do produto
 
 Sistema de gestão de uma locadora. O usuário autenticado administra clientes, endereços, itens de estoque, agendamentos de locação, usuários e movimentações financeiras. O sistema também expõe um catálogo público e possui o **Kanvas**, um editor visual de documentos que pode consumir dados do sistema e imprimir/gerar PDF pelo navegador.

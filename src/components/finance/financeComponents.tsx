@@ -75,12 +75,13 @@ export const getColumns = (handleDelete: (id: string) => void): Column<FinanceMo
         )
     },
     {
-        key: 'tipo',
+        key: 'tipo', filterType: 'select',
+        filterOptions: [{ value: 'LUCRO', label: 'Entrada' }, { value: 'GASTO', label: 'Saída' }],
         label: 'Tipo',
         render: (_, row) => (
             <span className={`pill ${row.tipo === 'LUCRO' ? 'success' : 'danger'}`} style={{
                 background: row.tipo === 'LUCRO' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)',
-                color: row.tipo === 'LUCRO' ? '#4caf50' : '#f44336',
+                color: row.tipo === 'LUCRO' ? 'var(--finance-income, #4caf50)' : 'var(--finance-expense, #f44336)',
                 padding: '4px 10px',
                 borderRadius: '6px',
                 fontWeight: '600',
@@ -92,17 +93,17 @@ export const getColumns = (handleDelete: (id: string) => void): Column<FinanceMo
         )
     },
     {
-        key: 'data',
+        key: 'data', filterType: 'date',
         label: 'Data',
         render: (_, row) => dayjs(row.data).format('DD/MM/YYYY')
     },
     {
-        key: 'valor',
+        key: 'valor', filterType: 'number',
         label: 'Valor',
         render: (_, row) => (
             <span style={{
                 fontWeight: '700',
-                color: row.tipo === 'LUCRO' ? '#4caf50' : '#f44336'
+                color: row.tipo === 'LUCRO' ? 'var(--finance-income, #4caf50)' : 'var(--finance-expense, #f44336)'
             }}>
                 {row.tipo === 'LUCRO' ? '+' : '-'} {formatCurrency(row.valor)}
             </span>
@@ -110,7 +111,7 @@ export const getColumns = (handleDelete: (id: string) => void): Column<FinanceMo
     },
     {
         key: 'id',
-        label: 'Ações',
+        label: 'Ações', sortable: false, filterable: false,
         render: (_, row) => {
             if (row.isAgenda) return <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic' }}>Automático</span>;
             return (

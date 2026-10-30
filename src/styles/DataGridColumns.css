@@ -1,0 +1,69 @@
+.datagrid-column-heading { display: flex; align-items: center; gap: 4px; }
+.datagrid-column-sort, .datagrid-column-filter { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 4px 0; border: 0; background: transparent; color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; text-align: left; }
+.datagrid-column-sort { flex: 1; justify-content: flex-start; }
+.datagrid-column-filter { min-width: 44px; flex-shrink: 0; border-radius: 6px; }
+.datagrid-column-filter.active, .datagrid-column-filter:hover, .datagrid-column-sort:hover { color: var(--accent-hover); }
+.datagrid-column-filter.active { background: var(--accent-light); }
+@media (min-width: 769px) {
+    table.datagrid th { padding-top: 2px; padding-bottom: 2px; }
+}
+.datagrid-column-heading button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.datagrid-columns-button { min-height: 44px; gap: 6px; }
+.datagrid-column-menu { width: min(320px, calc(100vw - 32px)); padding: 16px; background: var(--bg-card); color: var(--text-primary); display: flex; flex-direction: column; gap: 16px; }
+.datagrid-column-menu-title { display: flex; justify-content: space-between; align-items: center; }
+.datagrid-column-menu-title button { width: 44px; min-height: 44px; border: 0; border-radius: 6px; background: transparent; color: var(--text-primary); font-size: 24px; cursor: pointer; }
+.datagrid-column-menu label { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.datagrid-column-menu :is(input, select) { min-height: 44px; min-width: 0; width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 16px; color: var(--text-primary); background: var(--bg-primary); }
+.datagrid-column-menu-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.datagrid-column-menu-actions button { flex: 1; min-height: 44px; }
+
+
+.datagrid-filter-area { flex: 1; min-width: 0; max-width: 320px; }
+.datagrid-filter-area--custom { max-width: none; }
+.datagrid-filter-toggle { display: none; }
+@media (max-width: 768px) {
+    .datagrid-filter-area { width: 100%; max-width: none; flex: none; }
+    .datagrid-filter-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; }
+    .datagrid-filter-toggle-chevron { margin-left: auto; }
+    .datagrid-filter-area.is-expanded .datagrid-filter-toggle-chevron { transform: rotate(180deg); }
+    .datagrid-filter-area:not(.is-expanded) .datagrid-filter-content { display: none; }
+    .datagrid-filter-area.is-expanded .datagrid-filter-content { margin-top: 12px; }
+}
+
+
+/* A barra e a paginação deixam a maior parte da altura para os registros. */
+@media (max-width: 768px) {
+    .datagrid-wrapper > .datagrid-toolbar {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 8px;
+        padding: 8px;
+        align-items: center;
+    }
+    .datagrid-toolbar .datagrid-filter-area { display: contents; }
+    .datagrid-toolbar .datagrid-filter-toggle { grid-column: 1; grid-row: 1; width: 44px; padding: 0; position: relative; }
+    .datagrid-filter-toggle > span:not(.badge),
+    .datagrid-filter-toggle .datagrid-filter-toggle-chevron,
+    .datagrid-columns-button > span:not(.badge) { display: none; }
+    .datagrid-toolbar .datagrid-filter-content { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
+    .datagrid-toolbar .datagrid-filter-area.is-expanded .datagrid-filter-content { margin-top: 4px; }
+    .datagrid-toolbar .datagrid-actions { grid-column: 2; grid-row: 1; gap: 8px; min-width: 0; }
+    .datagrid-toolbar .datagrid-actions .btn { min-width: 44px; height: 44px; padding: 0 8px; }
+    .datagrid-toolbar .datagrid-columns-button { width: 44px; padding: 0; position: relative; }
+    .datagrid-filter-toggle > .badge, .datagrid-columns-button > .badge { position: absolute; top: -4px; right: -4px; min-width: 16px; padding: 2px 4px; font-size: 10px; }
+    .datagrid-wrapper > .datagrid-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); font-size: 11px; }
+    .datagrid-footer .datagrid-footer-controls { display: contents; }
+    .datagrid-footer .datagrid-page-size { grid-column: 2; margin: 0; }
+    .datagrid-footer .datagrid-page-size-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .datagrid-footer .datagrid-page-size select { width: 58px; min-height: 44px; padding: 4px; font-size: 12px; }
+    .datagrid-footer .datagrid-pagination { grid-column: 3; gap: 2px; }
+    .datagrid-footer .datagrid-pagination > span { min-width: 48px; text-align: center; font-size: 11px; }
+    .datagrid-footer .datagrid-pagination .btn { width: 44px; min-height: 44px; padding: 0; }
+    .datagrid-wrapper .datagrid-mobile-list { gap: 8px; padding: 8px; }
+    .datagrid-wrapper .datagrid-mobile-card { flex-shrink: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; padding: 12px; }
+    .datagrid-mobile-card > .datagrid-mobile-field { grid-column: 1 / -1; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; }
+    .datagrid-mobile-card > .datagrid-mobile-field--stacked { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    .datagrid-mobile-card > .datagrid-mobile-field--half { grid-column: span 1; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .datagrid-wrapper .datagrid-mobile-label { font-size: 10px; }
+    .datagrid-wrapper .datagrid-mobile-value { line-height: 1.45; }
+}

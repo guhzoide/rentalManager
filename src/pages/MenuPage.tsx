@@ -29,7 +29,7 @@ export function MenuPage({ onNavigate, modules }: MenuPageProps) {
                     >
                         <div
                             className="menu-card-icon"
-                            style={{ background: 'rgba(99, 102, 241, 0.2)' }}
+                            style={{ background: 'var(--menu-icon-bg, rgba(99, 102, 241, 0.2))' }}
                         >
                             {module.icone}
                         </div>

@@ -58,13 +58,19 @@ body.light {
   --text-secondary: #475569;
   --text-muted: #64748b;
 
-  --border: rgba(0, 0, 0, 0.08);
-  --border-focus: rgba(37, 99, 235, 0.4);
+  --border: #c5d0de;
+  --border-focus: #7fa2df;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.07);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-glow: 0 0 15px rgba(37, 99, 235, 0.15);
+
+  --success: #15803d;
+  --success-light: #ecfdf3;
+  --danger: #dc2626;
+  --danger-light: #fff1f2;
+  --warning: #b45309;
 }
 
 /* ─── Reset & Base ───────────────────────────────────────────────────────────── */
@@ -574,10 +580,22 @@ body {
 
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 20px;
   width: 100%;
-  max-width: 900px;
+  max-width: none;
+}
+
+@media (max-width: 1440px) {
+  .menu-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1200px) {
+  .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1024px) {
+  .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .menu-card {
@@ -2647,3 +2665,104 @@ select.form-control {
 .image-upload small { color: var(--text-secondary); overflow-wrap: anywhere; }
 .image-upload small[role=alert] { color: var(--danger); }
 .image-upload-preview { width: 100%; height: 150px; object-fit: contain; border-radius: 8px; background: var(--bg-secondary); }
+
+
+.agenda-search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.agenda-filter-combo {
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+}
+@media (max-width: 768px) {
+  .agenda-search-filters { width: 100%; }
+  .agenda-filter-combo { flex: 1 1 100%; min-width: 0; max-width: none; }
+}
+
+
+/* Listagens ocupam o espaço disponível; somente os registros rolam. */
+.grid-page {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.datagrid-wrapper { overflow: hidden; flex: 1; }
+.datagrid-table-wrapper { scrollbar-gutter: stable; }
+.datagrid-footer { gap: 12px; flex-wrap: wrap; }
+.datagrid-footer-controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.datagrid-page-size { display: flex; align-items: center; gap: 8px; }
+.datagrid-page-size select {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font: inherit;
+}
+.agenda-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.agenda-page .agenda-layout { flex: 1; height: auto; min-height: 0; overflow: hidden; }
+.agenda-page--form { padding: 24px; }
+.agenda-page--form .agenda-layout { overflow-y: auto; }
+.finance-page-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 28px;
+}
+.finance-period-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+}
+.finance-history-card {
+  height: clamp(320px, 65dvh, 800px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.finance-history-card > h3 { flex-shrink: 0; }
+.finance-history-card > .datagrid-wrapper { height: auto; }
+.address-grid-container { height: 360px; min-height: 0; display: flex; flex-direction: column; }
+@media (max-width: 768px) {
+  .datagrid-footer-controls { gap: 8px; justify-content: space-between; width: 100%; }
+  .datagrid-page-size select,
+  .datagrid-pagination button { min-height: 44px; min-width: 44px; }
+  .agenda-page--form { padding: 16px; }
+  .finance-period-filter { margin-left: 0; width: 100%; }
+  .finance-page-toolbar > .btn { flex: 1; justify-content: center; }
+  .finance-period-filter .form-control { flex: 1; min-height: 44px; }
+}
+
+@media (max-width: 768px) {
+  .datagrid-page-size { flex-direction: column; align-items: flex-start; gap: 2px; }
+}
+
+.datagrid-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 768px) {
+  .datagrid-actions .btn { min-height: 44px; }
+}

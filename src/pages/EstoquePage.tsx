@@ -1,5 +1,8 @@
+import { useGridColumns } from '@/hooks/useGridColumns';
+import { useGridPagination } from '@/hooks/useGridPagination';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { trpc, type AppRouter } from '@/lib/trpc';
+import type { inferRouterOutputs } from '@trpc/server';
 import { DataGrid, Column } from '@/components/ui/DataGrid';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from 'react-toastify';
@@ -14,50 +17,45 @@ interface Categoria {
     nome: string;
 }
 
-interface EstoqueItem {
-    id: string;
-    nome: string;
-    categoriaId: string;
-    categoria: Categoria;
-    peso: number;
-    largura: number;
-    altura: number;
-    valorDiaria: number;
-    quantidade: number;
-    disponivel: number;
-    ativo: boolean;
-    imageUrl?: string | null;
-    imageUrls?: string[];
-}
+type EstoqueItem = inferRouterOutputs<AppRouter>['estoque']['list']['data'][number];
 
 const columns: Column<EstoqueItem>[] = [
     { key: 'nome', label: 'Nome do Item' },
-    { key: 'categoria', label: 'Categoria', render: (_, row) => row.categoria?.nome ?? '—' },
-    { key: 'peso', label: 'Peso (kg)', width: '100px', render: (v) => `${v} kg` },
+    { key: 'categoria', field: 'categoria.nome', label: 'Categoria', render: (_, row) => row.categoria?.nome ?? '—' },
+    { key: 'peso', filterType: 'number', label: 'Peso (kg)', width: '100px', render: (v) => `${v} kg` },
     {
-        key: 'quantidade', label: 'Qtd Estoque', width: '100px',
+        key: 'quantidade', filterType: 'number', label: 'Qtd Estoque', width: '100px',
         render: (v) => <strong style={{ color: Number(v) > 0 ? 'var(--success)' : 'var(--danger)' }}>{v}</strong>,
     },
     {
-        key: 'disponivel', label: 'Qtd Disponível', width: '100px',
+        key: 'disponivel', filterType: 'number', label: 'Qtd Disponível', width: '100px',
         render: (v) => <strong style={{ color: Number(v) > 0 ? 'var(--success)' : 'var(--danger)' }}>{v}</strong>,
     },
     {
-        key: 'valorDiaria', label: 'Valor/Diária', width: '120px',
+        key: 'valorDiaria', filterType: 'number', label: 'Valor/Diária', width: '120px',
         render: (v) => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
     },
     {
-        key: 'ativo', label: 'Status', width: '100px',
+        key: 'ativo', filterType: 'boolean', label: 'Status', width: '100px',
         render: (v) => (
             <span className={`badge ${v ? 'badge-success' : 'badge-danger'}`} style={!v ? { background: 'var(--danger-light)', color: 'var(--danger)' } : {}}>
                 {v ? 'Ativo' : 'Inativo'}
+            </span>
+        ),
+    },
+    {
+        key: 'exibirCatalogo', filterType: 'boolean', label: 'Exibir catalogo', width: '100px',
+        render: (v) => (
+            <span className={`badge ${v ? 'badge-success' : 'badge-danger'}`} style={!v ? { background: 'var(--danger-light)', color: 'var(--danger)' } : {}}>
+                {v ? 'Sim' : 'Não'}
             </span>
         ),
     }
 ];
 
 export function EstoquePage() {
-    const [page, setPage] = useState(1);
+    const { page, setPage, pageSize, onPageSizeChange } = useGridPagination();
+    const gridColumns = useGridColumns(columns, setPage);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Partial<EstoqueItem> | null>(null);
     const [formKey, setFormKey] = useState(0);
@@ -78,28 +76,28 @@ export function EstoquePage() {
 
     const utils = trpc.useUtils();
 
-    const { data: estoqueData, isLoading: isLoadingList } = trpc.estoque.list.useQuery({ pagina: page, limit: 20 });
+    const { data: estoqueData, isLoading: isLoadingList } = trpc.estoque.list.useQuery({ pagina: page, limit: pageSize, ...gridColumns.query });
     const { data: categoryData, isLoading: isLoadingCategories } = trpc.categorias.list.useQuery({ pagina: 1, limit: 1000 });
     const categories = (categoryData?.data ?? []) as Categoria[];
 
     const createMutation = trpc.estoque.create.useMutation({
-        onSuccess: () => { toast.success('Item salvo com sucesso!'); utils.estoque.list.invalidate(); setModalOpen(false); },
+        onSuccess: () => { toast.success('Item salvo com sucesso!'); utils.estoque.list.invalidate(); void utils.seletores.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const updateMutation = trpc.estoque.update.useMutation({
-        onSuccess: () => { toast.success('Item atualizado com sucesso!'); utils.estoque.list.invalidate(); setModalOpen(false); },
+        onSuccess: () => { toast.success('Item atualizado com sucesso!'); utils.estoque.list.invalidate(); void utils.seletores.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const deleteMutation = trpc.estoque.delete.useMutation({
-        onSuccess: () => { toast.success('Item removido!'); utils.estoque.list.invalidate(); setModalOpen(false); },
+        onSuccess: () => { toast.success('Item removido!'); utils.estoque.list.invalidate(); void utils.seletores.invalidate(); setModalOpen(false); },
         onError: (err) => toast.error(err.message),
     });
 
     const refreshCategories = () => {
         utils.categorias.list.invalidate();
-        utils.estoque.list.invalidate();
+        utils.estoque.list.invalidate(); void utils.seletores.invalidate();
         setEditingCategory(null);
         setCategoryName('');
     };
@@ -147,8 +145,9 @@ export function EstoquePage() {
     const isCategoryPending = createCategoryMutation.isPending || updateCategoryMutation.isPending || deleteCategoryMutation.isPending;
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div className="grid-page">
             <DataGrid
+                {...gridColumns.props}
                 columns={columns}
                 data={estoqueData?.data || []}
                 loading={isLoadingList}
@@ -157,12 +156,13 @@ export function EstoquePage() {
                 total={estoqueData?.total || 0}
                 page={page}
                 onPageChange={(p) => setPage(p)}
-                pageSize={20}
+                pageSize={pageSize}
+                onPageSizeChange={onPageSizeChange}
                 emptyText="Nenhum item no estoque."
                 onRefresh={() => utils.estoque.list.invalidate()}
                 toolbarActions={(
                     <button className="btn btn-primary" onClick={() => setCategoryManagerOpen(true)} title="Gerenciar categorias">
-                        🏷 Categorias
+                        🏷
                     </button>
                 )}
             />
@@ -204,6 +204,7 @@ export function EstoquePage() {
                         quantidade: editing.quantidade ?? 0,
                         disponivel: editing.disponivel ?? 0,
                         ativo: editing.ativo ?? true,
+                        exibirCatalogo: editing.exibirCatalogo ?? true,
                         imageUrl: editing.imageUrl || '',
                         imageUrls: editing.imageUrls || [],
                     } : undefined}

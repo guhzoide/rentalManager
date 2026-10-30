@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { financeAnalyticsSchema, getFinanceAnalytics } from '../utils/financeAnalytics.js';
 import { moduleProcedure, router } from '../trpc.js';
 import { prisma } from '../trpc.js';
 import { paginationSchema, getPaginatedResult } from '../utils/pagination.js';
@@ -12,6 +13,10 @@ const transacaoInputSchema = z.object({
 });
 
 export const transacaoRouter = router({
+    analytics: moduleProcedure('financeiro')
+        .input(financeAnalyticsSchema)
+        .query(({ input }) => getFinanceAnalytics(prisma, input)),
+
     list: moduleProcedure(['financeiro', 'canvas'])
     .input(paginationSchema)
     .query(async ({ input }) => {

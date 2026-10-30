@@ -1,3 +1,5 @@
+import { useGridColumns } from '@/hooks/useGridColumns';
+import { useGridPagination } from '@/hooks/useGridPagination';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import TextField from '@mui/material/TextField';
@@ -17,15 +19,16 @@ interface Group {
 }
 
 const columns: Column<Group>[] = [
-    { key: 'codigo', label: 'Código', width: '90px' },
+    { key: 'codigo', filterType: 'number', label: 'Código', width: '90px' },
     { key: 'nome', label: 'Grupo' },
     { key: 'descricao', label: 'Descrição' },
-    { key: 'moduloIds', label: 'Módulos', render: (value: string[]) => value.length },
+    { key: 'moduloIds', sortable: false, filterable: false, label: 'Módulos', render: (value: string[]) => value.length },
 ];
 
 export function GruposPage() {
     const utils = trpc.useUtils();
-    const [page, setPage] = useState(1);
+    const { page, setPage, pageSize, onPageSizeChange } = useGridPagination();
+    const gridColumns = useGridColumns(columns, setPage);
     const [editing, setEditing] = useState<Group | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [nome, setNome] = useState('');
@@ -33,12 +36,12 @@ export function GruposPage() {
     const [moduloIds, setModuloIds] = useState<string[]>([]);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
-    const { data, isLoading } = trpc.grupos.list.useQuery({ pagina: page, limit: 20 });
+    const { data, isLoading } = trpc.grupos.list.useQuery({ pagina: page, limit: pageSize, ...gridColumns.query });
     const { data: modules = [] } = trpc.grupos.modules.useQuery();
 
     const closeModal = () => setModalOpen(false);
     const refresh = () => {
-        utils.grupos.list.invalidate();
+        utils.grupos.list.invalidate(); void utils.seletores.invalidate();
         utils.usuarios.list.invalidate();
         closeModal();
     };
@@ -76,8 +79,9 @@ export function GruposPage() {
     const pending = createMutation.isPending || updateMutation.isPending;
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div className="grid-page">
             <DataGrid
+                {...gridColumns.props}
                 columns={columns}
                 data={(data?.data ?? []) as Group[]}
                 loading={isLoading}
@@ -86,7 +90,8 @@ export function GruposPage() {
                 total={data?.total ?? 0}
                 page={page}
                 onPageChange={setPage}
-                pageSize={20}
+                pageSize={pageSize}
+                onPageSizeChange={onPageSizeChange}
                 emptyText="Nenhum grupo cadastrado."
             />
 

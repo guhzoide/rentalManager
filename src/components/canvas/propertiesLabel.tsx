@@ -1,4 +1,5 @@
-import { getColumnsFromRecords, TextElement, GridElement, FieldGroupElement, DB_TABLES, newId, formatRecordLabel } from '@/utils/canvasUtils';
+import { CanvasRecordPicker } from './CanvasRecordPicker';
+import { getColumnsFromRecords, TextElement, GridElement, FieldGroupElement, DB_TABLES, newId } from '@/utils/canvasUtils';
 import type { DbData, SeparatorElement, DbTableName, KanvasElement, FieldGroupField } from '@/utils/canvasUtils';
 import { Field } from '@/components/canvas/canvasComponent';
 
@@ -13,12 +14,13 @@ const inputStyle = {
 }
 
 export function PropertiesPanel({
-    el, dbData, onChange, onDelete,
+    el, dbData, onChange, onDelete, ensureRecord,
 }: {
     el: KanvasElement;
     dbData: DbData;
     onChange: (patch: Partial<KanvasElement>) => void;
     onDelete: () => void;
+    ensureRecord: (table: DbTableName, id: string) => Promise<void>;
 }) {
     return (
         <>
@@ -72,29 +74,15 @@ export function PropertiesPanel({
                     {el.dbTable && (
                         <>
                             <Field label="Registro">
-                                <select
-                                    value={el.dbRecordId ?? ''}
-                                    onChange={(e) => onChange({ dbRecordId: e.target.value || undefined } as Partial<TextElement>)}
-                                    style={inputStyle}
-                                >
-                                    <option value="">— primeiro registro —</option>
-                                    {(dbData[el.dbTable as DbTableName] || []).map((r: any) => (
-                                        <option key={String(r.id)} value={String(r.id)}>
-                                            {formatRecordLabel(el.dbTable!, r)}
-                                        </option>
-                                    ))}
-                                </select>
+                                <CanvasRecordPicker table={el.dbTable as DbTableName} records={dbData[el.dbTable as DbTableName] || []}
+                                    value={el.dbRecordId ? [el.dbRecordId] : []} ensureRecord={ensureRecord}
+                                    onChange={(ids) => onChange({ dbRecordId: ids[0] } as Partial<TextElement>)} />
                             </Field>
                             <Field label="Coluna">
-                                <select
-                                    value={el.dbColumn ?? ''}
-                                    onChange={(e) => onChange({ dbColumn: e.target.value || undefined } as Partial<TextElement>)}
-                                    style={inputStyle}
-                                >
+                                <select value={el.dbColumn ?? ''} style={inputStyle}
+                                    onChange={(e) => onChange({ dbColumn: e.target.value || undefined } as Partial<TextElement>)}>
                                     <option value="">— escolher coluna —</option>
-                                    {getColumnsFromRecords(dbData[el.dbTable as DbTableName] || []).map((c) => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
+                                    {getColumnsFromRecords(dbData[el.dbTable as DbTableName] || []).map((column) => <option key={column} value={column}>{column}</option>)}
                                 </select>
                             </Field>
                         </>
@@ -227,37 +215,9 @@ export function PropertiesPanel({
                             </Field>
 
                             <Field label="Registros (vazio = todos)">
-                                <div style={{
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 4,
-                                    padding: 6,
-                                    maxHeight: 180,
-                                    overflowY: 'auto',
-                                    background: 'var(--bg-primary)',
-                                }}>
-                                    {(dbData[el.dbTable as DbTableName] || []).map((r: any) => {
-                                        const id = String(r.id);
-                                        const selectedIds = el.selectedRecordIds ?? [];
-                                        const checked = selectedIds.includes(id);
-                                        return (
-                                            <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2, fontSize: 11 }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    onChange={(e) => {
-                                                        const next = e.target.checked
-                                                            ? [...selectedIds, id]
-                                                            : selectedIds.filter((x) => x !== id);
-                                                        onChange({ selectedRecordIds: next } as Partial<GridElement>);
-                                                    }}
-                                                />
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {formatRecordLabel(el.dbTable!, r)}
-                                                </span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
+                                <CanvasRecordPicker table={el.dbTable as DbTableName} records={dbData[el.dbTable as DbTableName] || []}
+                                    value={el.selectedRecordIds ?? []} ensureRecord={ensureRecord} multiple
+                                    onChange={(ids) => onChange({ selectedRecordIds: ids } as Partial<GridElement>)} />
                             </Field>
                         </>
                     ) : (
@@ -390,18 +350,9 @@ export function PropertiesPanel({
                     </Field>
                     {el.dbTable && (
                         <Field label="Registro">
-                            <select
-                                value={el.dbRecordId ?? ''}
-                                onChange={(e) => onChange({ dbRecordId: e.target.value || undefined } as Partial<FieldGroupElement>)}
-                                style={inputStyle}
-                            >
-                                <option value="">— primeiro registro —</option>
-                                {(dbData[el.dbTable as DbTableName] || []).map((r: any) => (
-                                    <option key={String(r.id)} value={String(r.id)}>
-                                        {formatRecordLabel(el.dbTable!, r)}
-                                    </option>
-                                ))}
-                            </select>
+                            <CanvasRecordPicker table={el.dbTable as DbTableName} records={dbData[el.dbTable as DbTableName] || []}
+                                value={el.dbRecordId ? [el.dbRecordId] : []} ensureRecord={ensureRecord}
+                                onChange={(ids) => onChange({ dbRecordId: ids[0] } as Partial<FieldGroupElement>)} />
                         </Field>
                     )}
 

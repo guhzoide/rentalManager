@@ -1,0 +1,52 @@
+.cardgrid.datagrid-mobile-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    align-items: start;
+    gap: 16px;
+    padding: 16px;
+}
+.cardgrid .datagrid-mobile-card {
+    min-width: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+}
+.cardgrid .datagrid-mobile-card.clickable { cursor: pointer; }
+.cardgrid .datagrid-mobile-card.clickable:hover { border-color: var(--border-focus); }
+.cardgrid .datagrid-mobile-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.cardgrid .datagrid-mobile-field { grid-column: 1 / -1; display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; align-items: start; }
+.cardgrid .datagrid-mobile-field--stacked { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.cardgrid .datagrid-mobile-field--half { grid-column: span 1; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.cardgrid .datagrid-mobile-label { color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+.cardgrid .datagrid-mobile-value { min-width: 0; color: var(--text-primary); overflow-wrap: anywhere; line-height: 1.45; }
+.datagrid-actions .datagrid-view-switch { display: inline-flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; padding: 0; border: 1px solid var(--border-focus); border-radius: 8px; background: var(--accent-light); color: var(--accent-hover); }
+.datagrid-view-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (min-width: 769px) {
+    .cardgrid.datagrid-mobile-list { grid-auto-rows: 1fr; align-items: stretch; }
+    .cardgrid .datagrid-mobile-card { height: 100%; align-content: start; }
+    .datagrid-wrapper.datagrid-view--table .cardgrid { display: none; }
+    .datagrid-wrapper.datagrid-view--cards .datagrid-desktop { display: none; }
+}
+@media (max-width: 768px) {
+    .cardgrid.datagrid-mobile-list { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px; }
+    .cardgrid .datagrid-mobile-card { padding: 12px; gap: 8px 12px; }
+    .cardgrid .datagrid-mobile-field { grid-template-columns: 76px minmax(0, 1fr); }
+    .cardgrid .datagrid-mobile-field--stacked, .cardgrid .datagrid-mobile-field--half { grid-template-columns: minmax(0, 1fr); }
+    .datagrid-actions .datagrid-view-switch { display: none; }
+}
+
+
+/* Contraste entre superfície, contorno e conteúdo no tema claro. */
+body.light .datagrid-wrapper > .datagrid-table-wrapper { background: #eef2f7; }
+body.light .cardgrid .datagrid-mobile-card { background: #ffffff; border-color: #b8c6d6; box-shadow: 0 2px 6px #0f172a0d; }
+body.light .cardgrid .datagrid-mobile-card.clickable:hover { border-color: #6c91c7; box-shadow: 0 3px 10px #0f172a14; }
+body.light .datagrid-wrapper table.datagrid thead { background: #e2e8f0; }
+body.light .datagrid-wrapper table.datagrid th { color: #334155; border-bottom: 2px solid #b8c6d6; }
+body.light .datagrid-wrapper table.datagrid td { border-bottom: 1px solid #cbd5e1; }
+body.light .datagrid-wrapper table.datagrid tbody tr { background: #ffffff; }
+body.light .datagrid-wrapper table.datagrid tbody tr:nth-child(even) { background: #f4f7fb; }
+body.light .datagrid-wrapper table.datagrid tbody tr:hover { background: #e7effb; }

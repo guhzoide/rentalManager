@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import TextField from '@mui/material/TextField';
-import Autocomplete from '@mui/material/Autocomplete';
+import { RemoteAutocomplete } from '@/components/ui/RemoteAutocomplete';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -19,7 +19,7 @@ interface EstoqueFormProps {
     onSubmit: (data: EstoqueInput) => void;
 }
 
-export function EstoqueForm({ defaultValues, categorias, categoriasLoading = false, onSubmit }: EstoqueFormProps) {
+export function EstoqueForm({ defaultValues, categorias, onSubmit }: EstoqueFormProps) {
     const {
         control,
         handleSubmit,
@@ -39,6 +39,7 @@ export function EstoqueForm({ defaultValues, categorias, categoriasLoading = fal
             quantidade: 0,
             disponivel: 0,
             ativo: true,
+            exibirCatalogo: true,
             imageUrl: '',
             imageUrls: [],
             ...defaultValues,
@@ -58,6 +59,7 @@ export function EstoqueForm({ defaultValues, categorias, categoriasLoading = fal
             quantidade: 0,
             disponivel: 0,
             ativo: true,
+            exibirCatalogo: true,
             imageUrl: '',
             imageUrls: [],
             ...defaultValues,
@@ -131,25 +133,10 @@ export function EstoqueForm({ defaultValues, categorias, categoriasLoading = fal
                         name="categoriaId"
                         control={control}
                         render={({ field }) => (
-                            <Autocomplete
-                                options={categorias}
-                                getOptionLabel={(option) => option.nome}
-                                value={categorias.find((categoria) => categoria.id === field.value) ?? null}
-                                onChange={(_, categoria) => field.onChange(categoria?.id ?? '')}
-                                isOptionEqualToValue={(option, value) => option.id === value.id}
-                                loading={categoriasLoading}
-                                disabled={categoriasLoading || categorias.length === 0}
-                                noOptionsText="Nenhuma categoria cadastrada"
-                                fullWidth
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        label="Categoria *"
-                                        variant="outlined"
-                                        error={!!errors.categoriaId}
-                                        helperText={errors.categoriaId?.message || (categorias.length === 0 && !categoriasLoading ? 'Cadastre uma categoria antes de salvar o produto.' : undefined)}
-                                    />
-                                )}
+                            <RemoteAutocomplete tipo="categorias" label="Categoria *"
+                                valueId={field.value} initialOptions={categorias}
+                                onChange={(option) => field.onChange(option?.id ?? '')} onBlur={field.onBlur}
+                                error={!!errors.categoriaId} helperText={errors.categoriaId?.message}
                             />
                         )}
                     />
@@ -204,6 +191,24 @@ export function EstoqueForm({ defaultValues, categorias, categoriasLoading = fal
                                     />
                                 }
                                 label="Ativo"
+                            />
+                        )}
+                    />
+                </div>
+
+                <div className="form-group full">
+                    <Controller
+                        name="exibirCatalogo"
+                        control={control}
+                        render={({ field }) => (
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={field.value ?? true}
+                                        onChange={(e) => field.onChange(e.target.checked)}
+                                    />
+                                }
+                                label="Exibir no catálogo"
                             />
                         )}
                     />

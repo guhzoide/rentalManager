@@ -38,6 +38,10 @@ export const usuarioRouter = router({
                 }
             });
 
+            const codes = [...new Set(result.data.map((user) => user.grupoCodigo).filter((code): code is number => typeof code === 'number'))];
+            const groups = codes.length ? await prisma.grupos.findMany({ where: { codigo: { in: codes } }, select: { codigo: true, nome: true } }) : [];
+            const groupNames = new Map(groups.map((group) => [group.codigo, group.nome]));
+
             const mappedData = result.data.map((u: any) => ({
                 id: u.id,
                 nome: u.name,
@@ -46,6 +50,7 @@ export const usuarioRouter = router({
                 master: u.master,
                 whatsapp: u.whatsapp,
                 grupoCodigo: u.grupoCodigo,
+                grupoNome: groupNames.get(u.grupoCodigo) ?? null,
                 createdAt: u.createdAt,
                 updatedAt: u.updatedAt,
             }));

@@ -4,21 +4,7 @@ import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
 import { DataGrid } from '@/components/ui/DataGrid';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
-import {
-    ResponsiveContainer,
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip as RechartsTooltip,
-    Legend as RechartsLegend,
-    BarChart,
-    Bar,
-    Cell,
-    PieChart,
-    Pie,
-} from 'recharts';
+import { FinanceAnalytics } from '@/components/finance/FinanceAnalytics';
 import {
     MONTHS,
     YEARS,
@@ -26,8 +12,6 @@ import {
 } from '@/utils/financeUtils';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import {
-    CustomTooltip,
-    CustomCountTooltip,
     getColumns,
 } from '@/components/finance/financeComponents';
 
@@ -74,14 +58,9 @@ export function FinancePage() {
     const {
         loadingTrans,
         loadingAgendas,
-        mostRentedToys,
-        oldestClients,
-        topSpendingClients,
-        expensesBreakdown,
         movements,
         totals,
-        dailyTrendData
-    } = useFinanceData(selectedMonth, selectedYear);
+    } = useFinanceData(selectedMonth, selectedYear, activeSubTab === 'movements');
 
     // Mutations
     const createMutation = trpc.transacoes.create.useMutation({
@@ -89,7 +68,8 @@ export function FinancePage() {
             toast.success('Movimentação registrada com sucesso!', { theme: 'colored' });
             setDescricao('');
             setValor('');
-            utils.transacoes.list.invalidate();
+            utils.transacoes.list.invalidate(); void utils.seletores.invalidate();
+            utils.transacoes.analytics.invalidate();
         },
         onError: (err) => {
             toast.error(`Erro: ${err.message}`, { theme: 'colored' });
@@ -99,7 +79,8 @@ export function FinancePage() {
     const deleteMutation = trpc.transacoes.delete.useMutation({
         onSuccess: () => {
             toast.success('Movimentação removida!', { theme: 'colored' });
-            utils.transacoes.list.invalidate();
+            utils.transacoes.list.invalidate(); void utils.seletores.invalidate();
+            utils.transacoes.analytics.invalidate();
         },
         onError: (err) => {
             toast.error(`Erro: ${err.message}`, { theme: 'colored' });
@@ -134,47 +115,9 @@ export function FinancePage() {
     const columns = getColumns(handleDelete);
 
     return (
-        <div className="page-inner">
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
-                <div>
-                    <h2>💵 Painel Financeiro</h2>
-                    <p>Controle de movimentações, estatísticas de locação e fluxo consolidado</p>
-                </div>
-
-                {/* Date selectors shared by both finance tabs */}
-                <div style={{ display: 'flex', gap: '10px', background: 'rgba(255, 255, 255, 0.03)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <select
-                        className="form-control"
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                        style={{ width: '130px', margin: 0 }}
-                    >
-                        {MONTHS.map((m, idx) => (
-                            <option key={m} value={idx}>{m}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        className="form-control"
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(e.target.value)}
-                        style={{ width: '90px', margin: 0 }}
-                    >
-                        {YEARS.map((y) => (
-                            <option key={y} value={y}>{y}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
+        <div className="page-inner finance-page">
             {/* Sub-Tab Navigation Bar */}
-            <div style={{
-                display: 'flex',
-                gap: '8px',
-                borderBottom: '1px solid var(--border)',
-                paddingBottom: '12px',
-                marginBottom: '28px'
-            }}>
+            <div className="finance-page-toolbar">
                 <button
                     className={`btn ${activeSubTab === 'movements' ? 'btn-primary' : 'btn-ghost'}`}
                     onClick={() => setActiveSubTab('movements')}
@@ -205,215 +148,35 @@ export function FinancePage() {
                 >
                     📊 Estatísticas & Gráficos
                 </button>
+                <div className="finance-period-filter">
+                    <select
+                        className="form-control"
+                        aria-label="Mês do financeiro"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                        style={{ width: '130px', margin: 0 }}
+                    >
+                        {MONTHS.map((m, idx) => (
+                            <option key={m} value={idx}>{m}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        className="form-control"
+                        aria-label="Ano do financeiro"
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(e.target.value)}
+                        style={{ width: '90px', margin: 0 }}
+                    >
+                        {YEARS.map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {activeSubTab === 'analytics' ? (
-                /* ─── GRAPHICAL ANALYTICS DASHBOARD ─── */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                    {/* HERO CASH FLOW TREND AREA CHART */}
-                    <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div>
-                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                📈 Fluxo Diário de Caixa (Entradas vs Saídas)
-                            </h3>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                Acompanhamento diário das receitas e despesas registradas no mês corrente
-                            </p>
-                        </div>
-                        
-                        <div style={{ width: '100%', height: '320px', minHeight: '300px' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={dailyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                        </linearGradient>
-                                        <linearGradient id="colorSaidas" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
-                                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-                                    <XAxis dataKey="dia" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
-                                    <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} />
-                                    <RechartsTooltip content={<CustomTooltip />} />
-                                    <RechartsLegend verticalAlign="top" height={36} iconType="circle" />
-                                    <Area type="monotone" dataKey="Entradas" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorEntradas)" name="Receitas" />
-                                    <Area type="monotone" dataKey="Saídas" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorSaidas)" name="Despesas" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-                        gap: '24px'
-                    }}>
-                        {/* Rankings use the full row so labels and values remain readable as data grows. */}
-                        <div className="card" style={{ gridColumn: '1 / -1', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    🧸 Brinquedos Mais Alugados
-                                </h3>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                    Os itens de estoque com maior recorrência de agendamento (total)
-                                </p>
-                            </div>
-
-                            <div style={{ width: '100%', height: '340px' }}>
-                                {mostRentedToys.length === 0 ? (
-                                    <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', paddingTop: '100px' }}>Nenhum aluguel encontrado no sistema.</p>
-                                ) : (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={mostRentedToys} margin={{ top: 10, right: 16, left: 0, bottom: 44 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-                                            <XAxis dataKey="nome" stroke="var(--text-muted)" fontSize={11} tickLine={false} interval={0} angle={-18} textAnchor="end" height={60} />
-                                            <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} allowDecimals={false} />
-                                            <RechartsTooltip content={<CustomCountTooltip />} />
-                                            <Bar dataKey="count" fill="#6366f1" radius={[6, 6, 0, 0]} name="Aluguéis" maxBarSize={56}>
-                                                {mostRentedToys.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff'][index % 5]} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* 2. CLIENTES QUE MAIS GASTAM (Vertical BarChart) */}
-                        <div className="card" style={{ gridColumn: '1 / -1', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    👑 Clientes VIP (Maior Faturamento)
-                                </h3>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                    Clientes que mais geraram faturamento consolidado por locações
-                                </p>
-                            </div>
-
-                            <div style={{ width: '100%', height: '340px' }}>
-                                {topSpendingClients.length === 0 ? (
-                                    <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', paddingTop: '100px' }}>Sem dados de faturamento.</p>
-                                ) : (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={topSpendingClients} margin={{ top: 10, right: 16, left: 0, bottom: 44 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-                                            <XAxis dataKey="nome" stroke="var(--text-muted)" fontSize={11} tickLine={false} interval={0} angle={-18} textAnchor="end" height={60} />
-                                            <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                                            <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                                            <Bar dataKey="total" fill="#10b981" radius={[6, 6, 0, 0]} name="Total Gasto" maxBarSize={56}>
-                                                {topSpendingClients.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'][index % 5]} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* 3. GASTOS DA EMPRESA (Pie Donut Chart) */}
-                        <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    💸 Distribuição de Gastos da Empresa
-                                </h3>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                    Principais categorias de saídas manuais e operacionais (Consolidado: {formatCurrency(expensesBreakdown.total)})
-                                </p>
-                            </div>
-
-                            <div style={{ width: '100%', height: '230px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {expensesBreakdown.list.length === 0 ? (
-                                    <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhuma despesa manual lançada.</p>
-                                ) : (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={expensesBreakdown.list}
-                                                dataKey="value"
-                                                nameKey="category"
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={80}
-                                                paddingAngle={5}
-                                            >
-                                                {expensesBreakdown.list.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6'][index % 5]} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                            
-                            {expensesBreakdown.list.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 12px', justifyContent: 'center', fontSize: '11px', fontWeight: '600' }}>
-                                    {expensesBreakdown.list.map((item, index) => (
-                                        <div key={item.category} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6'][index % 5] }} />
-                                            <span style={{ color: 'var(--text-muted)' }}>{item.category}: {item.pct.toFixed(0)}%</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 4. CLIENTES MAIS ANTIGOS (Timeline List) */}
-                        <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    📅 Clientes Mais Antigos
-                                </h3>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                    Clientes registrados há mais tempo no banco de dados da locadora
-                                </p>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, justifyContent: 'center' }}>
-                                {oldestClients.length === 0 ? (
-                                    <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhum cliente cadastrado.</p>
-                                ) : (
-                                    oldestClients.map((client, idx) => (
-                                        <div key={client.id} style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            padding: '10px 14px',
-                                            background: 'rgba(255, 255, 255, 0.02)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '10px'
-                                        }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                    {idx + 1}. {client.nome}
-                                                </span>
-                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                                    📞 {client.contato}
-                                                </span>
-                                            </div>
-                                            <span style={{
-                                                fontSize: '11px',
-                                                background: 'rgba(168, 85, 247, 0.15)',
-                                                color: '#a855f7',
-                                                padding: '4px 10px',
-                                                borderRadius: '6px',
-                                                fontWeight: '600'
-                                            }}>
-                                                📅 {dayjs(client.createdAt).format('DD/MM/YYYY')}
-                                            </span>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <FinanceAnalytics month={selectedMonth} year={Number(selectedYear)} />
             ) : (
                 /* ─── CASH FLOW MOVEMENTS & TRANSACTIONS TABLE ─── */
                 <>
@@ -426,7 +189,7 @@ export function FinancePage() {
                     }}>
                         {/* Entradas */}
                         <div className="card" style={{
-                            background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%)',
+                            background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), var(--finance-summary-base, transparent)',
                             border: '1px solid rgba(76, 175, 80, 0.25)',
                             padding: '24px',
                             borderRadius: '12px'
@@ -434,7 +197,7 @@ export function FinancePage() {
                             <span style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>
                                 📈 Entradas (Lucros)
                             </span>
-                            <h3 style={{ fontSize: '32px', margin: '8px 0 0', fontWeight: '800', color: '#4caf50' }}>
+                            <h3 style={{ fontSize: '32px', margin: '8px 0 0', fontWeight: '800', color: 'var(--finance-income, #4caf50)' }}>
                                 {formatCurrency(totals.lucros)}
                             </h3>
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -444,7 +207,7 @@ export function FinancePage() {
 
                         {/* Saídas */}
                         <div className="card" style={{
-                            background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%)',
+                            background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), var(--finance-summary-base, transparent)',
                             border: '1px solid rgba(244, 67, 54, 0.25)',
                             padding: '24px',
                             borderRadius: '12px'
@@ -452,7 +215,7 @@ export function FinancePage() {
                             <span style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>
                                 📉 Saídas (Gastos)
                             </span>
-                            <h3 style={{ fontSize: '32px', margin: '8px 0 0', fontWeight: '800', color: '#f44336' }}>
+                            <h3 style={{ fontSize: '32px', margin: '8px 0 0', fontWeight: '800', color: 'var(--finance-expense, #f44336)' }}>
                                 {formatCurrency(totals.gastos)}
                             </h3>
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -463,8 +226,8 @@ export function FinancePage() {
                         {/* Saldo Líquido */}
                         <div className="card" style={{
                             background: totals.saldo >= 0
-                                ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%)'
-                                : 'linear-gradient(135deg, rgba(244, 67, 54, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%)',
+                                ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%), var(--finance-summary-base, transparent)'
+                                : 'linear-gradient(135deg, rgba(244, 67, 54, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%), var(--finance-summary-base, transparent)',
                             border: totals.saldo >= 0
                                 ? '1px solid rgba(76, 175, 80, 0.4)'
                                 : '1px solid rgba(244, 67, 54, 0.4)',
@@ -478,7 +241,7 @@ export function FinancePage() {
                                 fontSize: '32px',
                                 margin: '8px 0 0',
                                 fontWeight: '800',
-                                color: totals.saldo >= 0 ? '#4caf50' : '#f44336'
+                                color: totals.saldo >= 0 ? 'var(--finance-income, #4caf50)' : 'var(--finance-expense, #f44336)'
                             }}>
                                 {formatCurrency(totals.saldo)}
                             </h3>
@@ -490,11 +253,7 @@ export function FinancePage() {
 
                     <div className="finance-grid">
                         {/* Historic Table */}
-                        <div className="card" style={{ padding: '20px' }}>
-                            <h3 style={{ fontSize: '18px', marginBottom: '16px', fontWeight: '600' }}>
-                                📋 Histórico mensal de fluxo de caixa
-                            </h3>
-
+                        <div className="card finance-history-card">
                             {(loadingTrans || loadingAgendas) ? (
                                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                                     Carregando movimentações...
@@ -569,9 +328,9 @@ export function FinancePage() {
                                             onClick={() => setTipo('LUCRO')}
                                             style={{
                                                 flex: 1,
-                                                borderColor: tipo === 'LUCRO' ? '#4caf50' : 'transparent',
+                                                borderColor: tipo === 'LUCRO' ? 'var(--finance-income, #4caf50)' : 'transparent',
                                                 background: tipo === 'LUCRO' ? 'rgba(76, 175, 80, 0.15)' : '',
-                                                color: tipo === 'LUCRO' ? '#4caf50' : ''
+                                                color: tipo === 'LUCRO' ? 'var(--finance-income, #4caf50)' : ''
                                             }}
                                         >
                                             📈 Lucro (Entrada)
@@ -582,9 +341,9 @@ export function FinancePage() {
                                             onClick={() => setTipo('GASTO')}
                                             style={{
                                                 flex: 1,
-                                                borderColor: tipo === 'GASTO' ? '#f44336' : 'transparent',
+                                                borderColor: tipo === 'GASTO' ? 'var(--finance-expense, #f44336)' : 'transparent',
                                                 background: tipo === 'GASTO' ? 'rgba(244, 67, 54, 0.15)' : '',
-                                                color: tipo === 'GASTO' ? '#f44336' : ''
+                                                color: tipo === 'GASTO' ? 'var(--finance-expense, #f44336)' : ''
                                             }}
                                         >
                                             📉 Gasto (Saída)

@@ -1,3 +1,4 @@
+import { RemoteAutocomplete } from '@/components/ui/RemoteAutocomplete';
 import { trpc } from '@/lib/trpc';
 import { ElementView } from '@/components/canvas/elementView';
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -7,7 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { PropertiesPanel } from '@/components/canvas/propertiesLabel';
 import { ToolbarButton, Divider, Field } from '@/components/canvas/canvasComponent';
 import { emptyDocument, templateNotaFiscal, templateOrdemServico, templateRecibo, newId } from '@/utils/canvasUtils';
-import type { DbData, KanvasDoc, KanvasElement, ElementType } from '@/utils/canvasUtils';
+import type { DbData, DbTableName, KanvasDoc, KanvasElement, ElementType } from '@/utils/canvasUtils';
 
 const GRID_SIZE = 10;
 const snap = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE;
@@ -64,13 +65,29 @@ export function CanvasPage() {
     });
     const emitirNf = trpc.documentos.emitirNf.useMutation();
 
-    const dbData: DbData = {
+    const [resolvedData, setResolvedData] = useState<Partial<DbData>>({});
+    const snapshots: DbData = {
         estoque: estoqueData?.data || [],
         clientes: clientesData?.data || [],
         agendas: agendasData?.data || [],
         transacoes: transacoesData?.data || [],
         empresas: empresasRes || [],
     };
+
+    const dbData = Object.fromEntries(Object.entries(snapshots).map(([table, rows]) => [table,
+        [...new Map([...rows, ...(resolvedData[table as DbTableName] ?? [])].map((row) => [String(row.id), row])).values()],
+    ])) as DbData;
+    const ensureRecords = async (table: DbTableName, ids: string[]) => {
+        const result: Record<string, unknown>[] = [];
+        for (let offset = 0; offset < ids.length; offset += 200) {
+            result.push(...await utils.seletores.records.fetch({ table, ids: ids.slice(offset, offset + 200) }));
+        }
+        setResolvedData((current) => ({ ...current, [table]: [...new Map([
+            ...(current[table] ?? []), ...result,
+        ].map((row) => [String(row.id), row])).values()] }));
+        return result;
+    };
+    const ensureRecord = async (table: DbTableName, id: string) => { await ensureRecords(table, [id]); };
 
     const [activeDocId, setActiveDocId] = useState<string | null>(null);
     const [activeDoc, setActiveDoc] = useState<KanvasDoc>(() => emptyDocument('Documento 1'));
@@ -88,16 +105,27 @@ export function CanvasPage() {
     const loadDocument = async (id: string) => {
         const doc = await utils.documentos.get.fetch({ id });
         if (doc && doc.content) {
-            setActiveDoc(doc.content as unknown as KanvasDoc);
+            const content = doc.content as unknown as KanvasDoc;
+            const bindings = new Map<DbTableName, Set<string>>();
+            for (const element of content.elements) {
+                if ((element.type === 'text' || element.type === 'fieldGroup' || element.type === 'grid') && element.dbTable) {
+                    const table = element.dbTable as DbTableName;
+                    const ids = element.type === 'grid' ? element.selectedRecordIds ?? [] : element.dbRecordId ? [element.dbRecordId] : [];
+                    bindings.set(table, new Set([...(bindings.get(table) ?? []), ...ids]));
+                }
+            }
+            await Promise.all([...bindings].map(([table, ids]) => ensureRecords(table, [...ids])));
+            setActiveDoc(content);
             setActiveDocId(doc.id);
             setSelectedId(null);
         }
     };
 
-    const handleSelectAgendaForNf = (agendaId: string) => {
-        const agenda = agendasData?.data?.find((a: any) => String(a.id) === agendaId);
+    const handleSelectAgendaForNf = async (agendaId: string) => {
+        const [agenda] = await ensureRecords('agendas', [agendaId]);
         if (!agenda) return;
 
+        await ensureRecord('clientes', String(agenda.clienteId));
         const doc = templateNotaFiscal();
 
         const firstCompanyId = empresasRes?.[0]?.id;
@@ -552,6 +580,7 @@ export function CanvasPage() {
                         <PropertiesPanel
                             el={selected}
                             dbData={dbData}
+                            ensureRecord={ensureRecord}
                             onChange={(patch) => updateElement(selected.id, patch)}
                             onDelete={() => deleteElement(selected.id)}
                         />
@@ -613,56 +642,8 @@ export function CanvasPage() {
                         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
                             Selecione abaixo o agendamento de origem. O sistema irá carregar os itens, calcular datas, frete e desconto, e auto-preencher os dados do cliente na Nota Fiscal.
                         </p>
-                        <div style={{
-                            overflowY: 'auto',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 8,
-                            paddingRight: 4,
-                            maxHeight: '40vh'
-                        }}>
-                            {(dbData.agendas || []).map((agenda: any) => {
-                                const clientName = agenda.clientes?.nome || 'Cliente Sem Nome';
-                                const dateStr = agenda.data ? new Date(agenda.data).toLocaleDateString('pt-BR') : '';
-                                const endStr = agenda.dataColeta ? new Date(agenda.dataColeta).toLocaleDateString('pt-BR') : '';
-                                const qtyItems = agenda.itens?.length || 0;
-                                const fmtTotal = agenda.valorTotal?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
-
-                                return (
-                                    <div
-                                        key={agenda.id}
-                                        onClick={() => handleSelectAgendaForNf(agenda.id)}
-                                        style={{
-                                            padding: '12px 16px',
-                                            borderRadius: 10,
-                                            border: '1px solid var(--border)',
-                                            background: 'var(--bg-primary)',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            transition: 'all 0.2s',
-                                        }}
-                                        className="agenda-item-hover"
-                                    >
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                            <strong style={{ fontSize: 14, color: 'var(--text-primary)' }}>{clientName}</strong>
-                                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                                📅 Período: {dateStr} até {endStr} | 📦 {qtyItems} item(ns)
-                                            </span>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <strong style={{ fontSize: 14, color: 'var(--accent)' }}>{fmtTotal}</strong>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            {(!dbData.agendas || dbData.agendas.length === 0) && (
-                                <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 13 }}>
-                                    Nenhum agendamento encontrado no banco de dados.
-                                </div>
-                            )}
-                        </div>
+                        <RemoteAutocomplete tipo="agendas" label="Buscar locação por cliente, observação ou código" valueId=""
+                            onChange={(option) => { if (option) void handleSelectAgendaForNf(option.id).catch(() => toast.error('Não foi possível carregar a locação.')); }} />
                     </div>
                 }
                 footer={

@@ -1,0 +1,49 @@
+/* Superfícies e controles compartilhados do tema claro. */
+body.light .page-content,
+body.light .menu-page { background: var(--bg-primary); }
+
+body.light .menu-page { --menu-icon-bg: #e9efff; }
+body.light .menu-card { border-color: var(--border); background: #fff; box-shadow: var(--shadow-sm); }
+body.light .menu-card:hover { background: #f8fbff; border-color: #7fa2df; box-shadow: var(--shadow-md); }
+body.light .menu-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+body.light .menu-card-icon { box-shadow: inset 0 0 0 1px #d7e1f2; }
+body.light .menu-card-desc { color: var(--text-secondary); }
+
+body.light .modal { background: #fff; box-shadow: var(--shadow-lg); }
+body.light .modal-header,
+body.light .modal-footer { background: #f8fafc; }
+body.light .modal-header { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+body.light .modal-footer { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+body.light .modal-overlay { background: #0f172a61; }
+body.light .MuiPaper-root { border: 1px solid var(--border); box-shadow: var(--shadow-md); }
+body.light .MuiOutlinedInput-root { background: #fff; }
+body.light .MuiOutlinedInput-root.Mui-disabled { background: #f1f5f9; }
+body.light .MuiInputBase-input.Mui-disabled { -webkit-text-fill-color: #64748b; }
+body.light .MuiInputLabel-root.Mui-disabled { color: #64748b; }
+body.light .btn-ghost:hover { background: #eaf0f8; border-color: #aabbd0; }
+
+body.light .finance-page {
+    --finance-summary-base: #fff;
+    --finance-income: var(--success);
+    --finance-expense: var(--danger);
+}
+body.light .finance-page-toolbar { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: var(--shadow-sm); }
+body.light .finance-page .card { background: #fff; border-radius: 12px; box-shadow: var(--shadow-sm); }
+body.light .finance-history-card { border: 1px solid var(--border); }
+body.light .finance-form-card { background: #fff; }
+body.light .finance-form-card .form-label { color: var(--text-secondary); }
+
+body.light .finance-analytics :is(.fa-panel, .fa-metric, .fa-skeleton) { box-shadow: var(--shadow-sm); }
+body.light .fa-metric { border-top: 3px solid var(--accent); }
+body.light .fa-metric--income { border-top-color: var(--success); background: linear-gradient(135deg, #effbf3, #fff 85%); }
+body.light .fa-metric--income > strong { color: var(--success); }
+body.light .fa-metric--expense { border-top-color: var(--danger); background: linear-gradient(135deg, #fff1f2, #fff 85%); }
+body.light .fa-metric--expense > strong { color: var(--danger); }
+body.light .fa-metric--balance { background: linear-gradient(135deg, #eaf1ff, #fff 85%); }
+body.light .fa-metric--ticket { border-top-color: #7c3aed; background: linear-gradient(135deg, #f5f1ff, #fff 85%); }
+body.light .fa-result-badge.is-positive { border-color: #b8ddc7; background: #ecfdf3; color: #166534; }
+body.light .fa-result-badge.is-negative { border-color: #fecdd3; background: #fff1f2; color: #991b1b; }
+body.light .fa-view-switch button[aria-pressed=true] { background: var(--accent-light); color: var(--accent-hover); }
+
+body.light .login-bg-gradient { background: linear-gradient(135deg, #eff6ff, #f5f3ff, #eef2f7); }
+body.light .login-card { background: #ffffffed; border-color: var(--border); box-shadow: 0 20px 60px #0f172a1a; }
