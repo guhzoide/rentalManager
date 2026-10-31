@@ -159,12 +159,7 @@ export function CatalogPage() {
                         <a className="catalog-hero-primary" href="#catalog-items">Ver brinquedos <ArrowForwardRounded fontSize="small" /></a>
                         {contacts.length > 0 && <a className="catalog-hero-secondary" href="#catalog-contact"><WhatsApp fontSize="small" />Consultar data</a>}
                     </div>
-                    <div className="catalog-search-anchor" ref={searchAnchorRef}>
-                        <div className="catalog-search-field">
-                            <SearchRounded />
-                            <input ref={mainSearchRef} id="catalog-search-input" type="search" aria-label="Buscar brinquedo no catálogo" placeholder="Busque um brinquedo…" value={search} onChange={(event) => changeSearch(event.target.value)} />
-                        </div>
-                    </div>
+                    <div><p className="catalog-eyebrow">Para brincar e comemorar</p><h2>Brinquedos para a sua festa</h2><p className="catalog-results-intro">Veja as fotos, confira as medidas e encontre a diversão do seu evento.</p></div>
                     <div className="catalog-hero-highlights"><span><ScheduleRounded />Valores por diária</span><span><StraightenRounded />Confira as medidas</span></div>
                 </div>
                 <CatalogPartyShowcase items={items} onSelect={openItem} suspended={!!selectedItem || aboutOpen} />
@@ -173,8 +168,12 @@ export function CatalogPage() {
 
         <main className="catalog-container catalog-main" id="catalog-items">
             <div className="catalog-results-heading" ref={resultsRef}>
-                <div><p className="catalog-eyebrow">Para brincar e comemorar</p><h2>Brinquedos para a sua festa</h2><p className="catalog-results-intro">Veja as fotos, confira as medidas e encontre a diversão do seu evento.</p></div>
-                <span className="catalog-count" role="status">{catalogLoading ? <Skeleton className="catalog-skeleton-count" /> : `${estoqueRes?.total ?? 0} ${estoqueRes?.total === 1 ? 'brinquedo encontrado' : 'brinquedos encontrados'}`}</span>
+                <div className="catalog-search-anchor" ref={searchAnchorRef}>
+                    <div className="catalog-search-field">
+                        <SearchRounded />
+                        <input ref={mainSearchRef} id="catalog-search-input" type="search" aria-label="Buscar brinquedo no catálogo" placeholder="Busque um brinquedo…" value={search} onChange={(event) => changeSearch(event.target.value)} />
+                    </div>
+                </div>
             </div>
             <div className="catalog-toolbar">
                 <div className="catalog-filters" role="group" aria-label="Categorias dos brinquedos">
